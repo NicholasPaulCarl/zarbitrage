@@ -1,0 +1,672 @@
+import { useState, useEffect } from 'react';
+import Layout from '@/components/Layout';
+import AdminNavigation from '@/components/AdminNavigation';
+import { useAdminApi } from '@/hooks/use-admin-api';
+import { verifyToken } from '@/lib/token';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Key,
+  Loader2,
+  Lock,
+  RefreshCw,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+
+export default function AdminDebug() {
+  const { toast } = useToast();
+  const { adminApi, isLoading, error, tokenStatus, user } = useAdminApi();
+  const [authChecks, setAuthChecks] = useState({
+    session: { isLoading: true, hasUser: false, isAdmin: false },
+    token: { hasJwtToken: false, hasLegacyToken: false, isValid: false },
+    cookie: { hasAdminCookie: false },
+    adminAccessGranted: false,
+  });
+  const [isChecking, setIsChecking] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [manualToken, setManualToken] = useState('');
+  const [verificationResult, setVerificationResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  
+  // Check auth status on page load
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+  
+  // Update auth checks when token status changes
+  useEffect(() => {
+    if (tokenStatus) {
+      setAuthChecks(prev => ({
+        ...prev,
+        token: {
+          hasJwtToken: tokenStatus.hasToken && tokenStatus.tokenType === 'jwt',
+          hasLegacyToken: tokenStatus.hasToken && tokenStatus.tokenType === 'legacy',
+          isValid: tokenStatus.isValid,
+        }
+      }));
+    }
+  }, [tokenStatus]);
+  
+  // Update auth checks when user changes
+  useEffect(() => {
+    if (user) {
+      setAuthChecks(prev => ({
+        ...prev,
+        session: {
+          isLoading: false,
+          hasUser: !!user,
+          isAdmin: user?.isAdmin || false
+        }
+      }));
+    }
+  }, [user]);
+  
+  const checkAuthStatus = async () => {
+    try {
+      setIsChecking(true);
+      
+      // Check session status
+      const sessionResponse = await fetch('/api/auth/user');
+      const sessionData = await sessionResponse.json();
+      
+      // Check token status
+      const token = localStorage.getItem('adminToken') || '';
+      const tokenValid = token ? await verifyToken(token) : false;
+      
+      // Check cookies
+      const cookies = document.cookie.split(';').map(c => c.trim());
+      const hasAdminCookie = cookies.some(c => c.startsWith('adminAuth='));
+      
+      // Update state with all checks
+      setAuthChecks({
+        session: {
+          isLoading: false,
+          hasUser: sessionResponse.ok,
+          isAdmin: sessionData?.isAdmin || false
+        },
+        token: {
+          hasJwtToken: token.includes('.') && token.split('.').length === 3,
+          hasLegacyToken: token.includes(':'),
+          isValid: tokenValid
+        },
+        cookie: { hasAdminCookie },
+        adminAccessGranted: sessionData?.isAdmin || tokenValid || hasAdminCookie
+      });
+    } catch (error) {
+      console.error('Auth check error:', error);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+  
+  // Verify a token manually entered by the user
+  const handleVerifyToken = async () => {
+    try {
+      setIsVerifying(true);
+      setVerificationResult(null);
+      
+      if (!manualToken) {
+        setVerificationResult({
+          success: false,
+          message: 'Please enter a token to verify'
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/auth/verify-admin-token?token=${encodeURIComponent(manualToken)}`);
+      const data = await response.json();
+      
+      setVerificationResult({
+        success: response.ok,
+        message: data.message
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Token Verification Success",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Token Verification Failed",
+          description: data.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setVerificationResult({
+        success: false,
+        message: 'Verification error: ' + (error instanceof Error ? error.message : String(error))
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+  
+  // Generate a new admin token
+  const handleGenerateToken = async () => {
+    try {
+      setIsVerifying(true);
+      
+      const response = await fetch('/api/auth/generate-admin-token', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate admin token');
+      }
+      
+      const data = await response.json();
+      
+      // Store the token in localStorage
+      localStorage.setItem('adminToken', data.token);
+      
+      // Update verification result
+      setVerificationResult({
+        success: true,
+        message: `Admin token generated and stored in localStorage. Valid until: ${new Date(data.expires).toLocaleString()}`
+      });
+      
+      // Refresh auth status
+      checkAuthStatus();
+      
+      toast({
+        title: "Admin Token Generated",
+        description: "New admin token has been created and stored in your browser",
+      });
+    } catch (error) {
+      setVerificationResult({
+        success: false,
+        message: 'Token generation error: ' + (error instanceof Error ? error.message : String(error))
+      });
+      
+      toast({
+        title: "Token Generation Failed",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+  
+  // Quick admin login
+  const handleQuickAdminLogin = async () => {
+    try {
+      setIsVerifying(true);
+      
+      // First logout to ensure clean session
+      await fetch('/api/auth/logout', { method: 'POST' });
+      console.log('Cleared previous session before dev login:', await (await fetch('/api/auth/logout', { method: 'POST' })).json());
+      
+      // Attempt admin login
+      console.log('Attempting login with:', { username: 'admin' });
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: 'admin123' })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Admin login failed');
+      }
+      
+      const userData = await response.json();
+      console.log('Login successful, user data:', userData);
+      
+      // Update verification result
+      setVerificationResult({
+        success: true,
+        message: 'Dev login successful for admin account. You can now access admin features.'
+      });
+      
+      // Refresh auth status after short delay
+      setTimeout(() => {
+        checkAuthStatus();
+      }, 1000);
+      
+      console.log('Dev login success for admin, delaying redirect');
+      
+      toast({
+        title: "Admin Login Successful",
+        description: `Logged in as ${userData.username} (admin)`,
+      });
+    } catch (error) {
+      setVerificationResult({
+        success: false,
+        message: 'Dev login error: ' + (error instanceof Error ? error.message : String(error))
+      });
+      
+      toast({
+        title: "Admin Login Failed",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+  
+  // Convert session to token
+  const handleSessionToToken = async () => {
+    try {
+      setIsVerifying(true);
+      
+      const response = await fetch('/api/auth/session-to-token', {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to convert session to token');
+      }
+      
+      const data = await response.json();
+      
+      // Store the token in localStorage
+      localStorage.setItem('adminToken', data.token);
+      
+      // Update verification result
+      setVerificationResult({
+        success: true,
+        message: `Session converted to admin token and stored in localStorage. Valid until: ${new Date(data.expires).toLocaleString()}`
+      });
+      
+      // Refresh auth status
+      checkAuthStatus();
+      
+      toast({
+        title: "Session Converted to Token",
+        description: "Your session has been converted to an admin token",
+      });
+    } catch (error) {
+      setVerificationResult({
+        success: false,
+        message: 'Conversion error: ' + (error instanceof Error ? error.message : String(error))
+      });
+      
+      toast({
+        title: "Conversion Failed",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+  
+  // Clear all tokens and cookies
+  const handleClearTokens = () => {
+    // Clear localStorage
+    localStorage.removeItem('adminToken');
+    
+    // Clear cookies
+    document.cookie = "adminAuth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
+    // Refresh auth status
+    checkAuthStatus();
+    
+    // Alert user
+    alert('All admin tokens and cookies cleared');
+  };
+  
+  return (
+    <Layout>
+      <div className="container mx-auto py-10">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage users, subscriptions, and feature requests
+          </p>
+        </div>
+        
+        <AdminNavigation activeTab="debug">
+          <TabsContent value="debug" className="mt-6">
+            <Tabs defaultValue="status">
+              <TabsList className="mb-4">
+                <TabsTrigger value="status">Status</TabsTrigger>
+                <TabsTrigger value="verify">Verify Token</TabsTrigger>
+                <TabsTrigger value="generate">Generate Token</TabsTrigger>
+                <TabsTrigger value="session">Session Conversion</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="status">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Authentication Status</CardTitle>
+                      <CardDescription>Current authentication methods and status</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="font-medium mb-2 flex items-center">
+                            <Shield className="h-4 w-4 mr-2" />
+                            Session Authentication
+                          </h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-2 ${authChecks.session.hasUser ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span>Session Active</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-2 ${authChecks.session.isAdmin ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span>Admin Privileges</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <h3 className="font-medium mb-2 flex items-center">
+                            <Key className="h-4 w-4 mr-2" />
+                            Token Authentication
+                          </h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-2 ${authChecks.token.hasJwtToken ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span>JWT Token Present</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-2 ${authChecks.token.hasLegacyToken ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span>Legacy Token Present</span>
+                            </div>
+                            <div className="flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-2 ${authChecks.token.isValid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span>Token Valid</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <h3 className="font-medium mb-2 flex items-center">
+                            <Lock className="h-4 w-4 mr-2" />
+                            Cookie Authentication
+                          </h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center">
+                              <div className={`h-2 w-2 rounded-full mr-2 ${authChecks.cookie.hasAdminCookie ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <span>Admin Cookie Present</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            <span className="font-medium mr-2">Admin Access:</span>
+                            {authChecks.adminAccessGranted ? (
+                              <Badge className="bg-green-500">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Granted
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive">
+                                <X className="h-3 w-3 mr-1" />
+                                Denied
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={checkAuthStatus}
+                            disabled={isChecking}
+                          >
+                            {isChecking ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                            )}
+                            Refresh
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Token Information</CardTitle>
+                      <CardDescription>Details about your current admin token</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {tokenStatus?.hasToken ? (
+                          <>
+                            <div>
+                              <h3 className="font-medium mb-2 flex items-center">
+                                <ShieldCheck className="h-4 w-4 mr-2" />
+                                Token Details
+                              </h3>
+                              
+                              <div className="grid gap-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Type:</span>
+                                  <Badge variant="outline">
+                                    {tokenStatus.tokenType === 'jwt' ? 'JWT' : 'Legacy'}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Status:</span>
+                                  {tokenStatus.isValid ? (
+                                    <Badge className="bg-green-500">Valid</Badge>
+                                  ) : (
+                                    <Badge variant="destructive">Invalid</Badge>
+                                  )}
+                                </div>
+                                
+                                {tokenStatus.tokenType === 'jwt' && tokenStatus.expires && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Expires:</span>
+                                    <span>{new Date(tokenStatus.expires).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Username:</span>
+                                  <span>{tokenStatus.username || 'Unknown'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <Separator />
+                            
+                            <div>
+                              <h3 className="font-medium mb-2">Token Preview:</h3>
+                              <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded font-mono text-xs overflow-x-auto">
+                                {localStorage.getItem('adminToken')?.substring(0, 20)}...
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-32 text-center">
+                            <ShieldAlert className="h-10 w-10 text-muted-foreground mb-4" />
+                            <p className="text-muted-foreground">No admin token found in local storage</p>
+                            <p className="text-sm text-muted-foreground">Use the Generate Token tab to create one</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+          
+              <TabsContent value="verify">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Verify Admin Token</CardTitle>
+                    <CardDescription>Verify the validity of an admin token</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-medium mb-2">Current Token</h3>
+                        <div className="flex flex-col gap-4">
+                          <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded font-mono text-xs overflow-x-auto">
+                            {localStorage.getItem('adminToken') || 'No token found'}
+                          </div>
+                          
+                          <Button 
+                            onClick={() => {
+                              const token = localStorage.getItem('adminToken');
+                              if (token) {
+                                setManualToken(token);
+                                handleVerifyToken();
+                              } else {
+                                toast({
+                                  title: "No Token Found",
+                                  description: "There is no admin token stored in localStorage",
+                                  variant: "destructive"
+                                });
+                              }
+                            }} 
+                            disabled={isVerifying || !localStorage.getItem('adminToken')}
+                          >
+                            {isVerifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Verify Current Token
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div>
+                        <h3 className="font-medium mb-2">Verify Another Token</h3>
+                        <div className="space-y-4">
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="Enter admin token to verify" 
+                              value={manualToken}
+                              onChange={e => setManualToken(e.target.value)}
+                              className="font-mono text-sm"
+                            />
+                            <Button onClick={handleVerifyToken} disabled={isVerifying}>
+                              {isVerifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                              Verify
+                            </Button>
+                          </div>
+                          
+                          {verificationResult && (
+                            <Alert variant={verificationResult.success ? "default" : "destructive"}>
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>Verification Result</AlertTitle>
+                              <AlertDescription>{verificationResult.message}</AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="generate">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Generate Admin Token</CardTitle>
+                    <CardDescription>Generate a new admin token for testing</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button onClick={handleGenerateToken} disabled={isVerifying}>
+                          {isVerifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Generate New Admin Token
+                        </Button>
+                        
+                        <Button onClick={handleQuickAdminLogin} disabled={isVerifying} variant="outline">
+                          {isVerifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Quick Admin Login
+                        </Button>
+                        
+                        <Button 
+                          onClick={handleClearTokens} 
+                          disabled={isVerifying} 
+                          variant="destructive"
+                        >
+                          Clear All Tokens
+                        </Button>
+                      </div>
+                      
+                      {verificationResult && (
+                        <Alert variant={verificationResult.success ? "default" : "destructive"}>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Result</AlertTitle>
+                          <AlertDescription>{verificationResult.message}</AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="session">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Session to Token Conversion</CardTitle>
+                    <CardDescription>Convert your current session to a long-lived token</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-sm">
+                        If you are currently authenticated via session, you can convert your session to a token 
+                        for more reliable authentication across browser restarts or different devices.
+                      </p>
+                      
+                      <Button onClick={handleSessionToToken} disabled={isVerifying}>
+                        {isVerifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Convert Session to Token
+                      </Button>
+                      
+                      {verificationResult && (
+                        <Alert variant={verificationResult.success ? "default" : "destructive"}>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Conversion Result</AlertTitle>
+                          <AlertDescription>{verificationResult.message}</AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+        </AdminNavigation>
+      </div>
+    </Layout>
+  );
+}
