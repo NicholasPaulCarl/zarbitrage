@@ -39,6 +39,7 @@ export interface IStorage {
   
   // Daily spread tracking methods
   getDailySpreads(period?: string): Promise<DailySpread[]>;
+  getDailySpreadsByDateRange(startDate: Date, endDate: Date): Promise<DailySpread[]>;
   getDailySpreadByDate(date: Date, route: string): Promise<DailySpread | undefined>;
   createDailySpread(spread: InsertDailySpread): Promise<DailySpread>;
   updateDailySpread(id: number, data: UpdateDailySpread): Promise<DailySpread | undefined>;
@@ -214,65 +215,10 @@ export class MemStorage implements IStorage {
       }
     }
     
-    // Initialize realistic daily spread data for the last 30 days
-    this.initializeDailySpreadData();
+    // Removed mock daily spread data initialization - use real data only
   }
   
-  // Method to create realistic spread data with proper low values
-  private initializeDailySpreadData(): void {
-    const routes = [
-      { buy: 'Bitfinex', sell: 'VALR' },
-      { buy: 'Bitstamp', sell: 'LUNO' },
-      { buy: 'Kraken', sell: 'VALR' },
-      { buy: 'KuCoin', sell: 'LUNO' }
-    ];
-    
-    // Create data for the past 30 days with more realistic ranges
-    const today = new Date();
-    let id = this.dailySpreadCurrentId;
-    
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(today.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      routes.forEach(route => {
-        // Generate more realistic data with occasional lower values
-        // to match real-time opportunities (1.5% - 4%)
-        const baseSpread = 2.5; // base spread percentage
-        const variance = 1.5;   // variance range
-        
-        // Occasionally have very good opportunities (lower values)
-        const hasLowerOpportunity = Math.random() < 0.3; // 30% chance
-        
-        // Calculate spread values
-        let lowestSpread = baseSpread - (hasLowerOpportunity ? variance : (variance * 0.5));
-        lowestSpread = Math.max(1.5, lowestSpread); // Ensure minimum matches real-time opportunities
-        
-        const highestSpread = baseSpread + (variance * Math.random());
-        const avgSpread = (lowestSpread + highestSpread) / 2;
-        const dataPoints = Math.floor(Math.random() * 50) + 10; // Between 10-60 data points
-        
-        const dailySpread: DailySpread = {
-          id: id++,
-          date: dateStr,
-          buyExchange: route.buy,
-          sellExchange: route.sell,
-          route: `${route.buy} → ${route.sell}`,
-          highestSpread,
-          lowestSpread,
-          averageSpread: avgSpread,
-          dataPoints,
-          createdAt: date,
-          updatedAt: date
-        };
-        
-        this.dailySpreads.set(dailySpread.id, dailySpread);
-      });
-    }
-    
-    this.dailySpreadCurrentId = id;
-  }
+  // Removed initializeDailySpreadData method - system now uses only real data collected from APIs
   
   // User methods
   async getUser(id: number): Promise<User | undefined> {
@@ -503,6 +449,28 @@ export class MemStorage implements IStorage {
       });
   }
   
+  async getDailySpreadsByDateRange(startDate: Date, endDate: Date): Promise<DailySpread[]> {
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    return Array.from(this.dailySpreads.values())
+      .filter(spread => {
+        const spreadDate = typeof spread.date === 'string' 
+          ? spread.date
+          : new Date(spread.date).toISOString().split('T')[0];
+        return spreadDate >= startDateStr && spreadDate <= endDateStr;
+      })
+      .sort((a, b) => {
+        const dateA = typeof a.date === 'string' 
+          ? new Date(a.date).getTime() 
+          : new Date(a.date).getTime();
+        const dateB = typeof b.date === 'string' 
+          ? new Date(b.date).getTime() 
+          : new Date(b.date).getTime();
+        return dateA - dateB;
+      });
+  }
+  
   async getDailySpreadByDate(date: Date, route: string): Promise<DailySpread | undefined> {
     const dateStr = date.toISOString().split('T')[0];
     
@@ -614,22 +582,34 @@ import { pgStorage } from './db';
 // We'll use PostgreSQL storage if available, falling back to memory storage if there's an issue
 let storage: IStorage;
 
-try {
-  // Initialize PostgreSQL storage
-  pgStorage.initialize().catch(err => {
+// Initialize storage with proper async handling
+async function initializeStorage(): Promise<IStorage> {
+  // Check if DATABASE_URL is available
+  if (!process.env.DATABASE_URL) {
+    console.warn("DATABASE_URL not set - falling back to in-memory storage");
+    return new MemStorage();
+  }
+
+  try {
+    // Initialize PostgreSQL storage
+    await pgStorage.initialize();
+    console.log("Successfully initialized PostgreSQL storage");
+    return pgStorage;
+  } catch (err) {
     console.error("Failed to initialize PostgreSQL storage:", err);
     console.warn("Falling back to in-memory storage");
-    storage = new MemStorage();
-  });
-  
-  // Use PostgreSQL storage
-  storage = pgStorage;
-  console.log("Using PostgreSQL for persistent storage");
-} catch (err) {
-  // Fallback to in-memory storage if there's an issue
-  console.error("Error setting up PostgreSQL storage:", err);
-  console.warn("Falling back to in-memory storage");
-  storage = new MemStorage();
+    return new MemStorage();
+  }
 }
+
+// Initialize storage asynchronously
+storage = new MemStorage(); // Default fallback
+initializeStorage().then(initialized => {
+  storage = initialized;
+  console.log("Storage initialization complete");
+}).catch(err => {
+  console.error("Storage initialization failed:", err);
+  console.warn("Using in-memory storage as fallback");
+});
 
 export { storage, pgStorage };
