@@ -20,4 +20,6 @@ export { Form, FormItem, FormLabel, FormControl, FormDescription, FormMessage, F
 export { Progress, CircularProgress, type ProgressProps, type CircularProgressProps } from './Progress';
 export { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent, type TooltipProps } from './Tooltip';
 export { Tabs, TabsList, TabsTrigger, TabsContent, type TabsProps, type TabsListProps, type TabsTriggerProps, type TabsContentProps } from './Tabs';
-export { Label, type LabelProps } from './Label'; 
+export { Label, type LabelProps } from './Label';
+export { Avatar, AvatarImage, AvatarFallback, type AvatarProps, type AvatarImageProps, type AvatarFallbackProps } from './Avatar';
+export { Alert, AlertTitle, AlertDescription, type AlertProps, type AlertTitleProps, type AlertDescriptionProps } from './Alert'; 

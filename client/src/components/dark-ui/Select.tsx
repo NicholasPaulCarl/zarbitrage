@@ -62,7 +62,7 @@ export const Select: React.FC<SelectProps> = ({
     }
   };
 
-  const selectedOption = options.find(opt => opt.value === selectedValue);
+  const selectedOption = options?.find(opt => opt.value === selectedValue);
 
   const baseStyles = `
     relative w-full px-4 py-3
@@ -180,7 +180,7 @@ export const Select: React.FC<SelectProps> = ({
         </div>
       </div>
 
-      {isOpen && (
+      {isOpen && options && (
         <div style={getDropdownStyles()}>
           {options.map((option) => (
             <div

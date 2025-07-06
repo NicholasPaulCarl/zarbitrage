@@ -14,7 +14,7 @@ import {
   Tabs, 
   TabsList, 
   TabsTrigger 
-} from "@/components/ui/tabs";
+} from "@/components/dark-ui";
 import {
   Table,
   TableBody,

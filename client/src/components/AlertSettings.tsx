@@ -269,7 +269,7 @@ export default function AlertSettings({
             </div>
             <Switch 
               checked={soundEnabled} 
-              onChange={(checked: boolean) => {
+              onCheckedChange={(checked: boolean) => {
                 handleSoundToggleChange(checked);
                 toggleSoundAlerts(checked);
               }}
@@ -317,7 +317,7 @@ export default function AlertSettings({
             </div>
             <Switch 
               checked={browserNotificationEnabled} 
-              onChange={(checked: boolean) => {
+              onCheckedChange={(checked: boolean) => {
                 handleBrowserNotifToggleChange(checked);
                 toggleBrowserNotifications(checked);
               }}

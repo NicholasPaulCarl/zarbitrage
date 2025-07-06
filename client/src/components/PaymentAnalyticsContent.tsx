@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger, Alert, AlertDescription, Separator, useTheme } from '@/components/dark-ui';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { 
   Users, 
   CreditCard, 
@@ -54,6 +49,7 @@ interface PaymentAnalytics {
 export default function PaymentAnalyticsContent() {
   const [activeTab, setActiveTab] = useState('overview');
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   const getAdminToken = () => {
     return localStorage.getItem('adminToken');
