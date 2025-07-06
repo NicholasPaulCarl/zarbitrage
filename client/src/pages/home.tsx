@@ -198,6 +198,7 @@ export default function Home() {
               <Button 
                 onClick={() => setLocation('/register')}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 py-2"
+                data-testid="get-started-button"
               >
                 Get Started Free
               </Button>
@@ -205,6 +206,7 @@ export default function Home() {
                 onClick={() => setLocation('/login')}
                 variant="outline"
                 className="border-blue-500 text-blue-700 hover:bg-blue-50 font-medium px-6 py-2"
+                data-testid="sign-in-button"
               >
                 Sign In
               </Button>

@@ -7,12 +7,20 @@ import { users, alertHistory, featureRequests, dailySpreads, blacklistedEmails, 
 import type { WebhookAlert, InsertWebhookAlert, UpdateWebhookAlert } from './webhookStorage';
 import { IStorage } from './storage';
 
-// Connect to PostgreSQL database with a connection pool for better reliability
+// Connect to PostgreSQL database with optimized connection pool settings
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 5000, // How long to wait for a connection to become available
+  max: 100, // Maximum number of clients in the pool (increased for scalability)
+  min: 5, // Minimum number of idle connections in the pool
+  idleTimeoutMillis: 60000, // How long a client is allowed to remain idle (60 seconds)
+  connectionTimeoutMillis: 10000, // How long to wait for a connection (10 seconds)
+  acquireTimeoutMillis: 60000, // Maximum time to wait for a connection from pool
+  maxUses: 7500, // Close connection after this many uses to prevent memory leaks
+  allowExitOnIdle: false, // Don't exit process when all connections are idle
+  statement_timeout: 30000, // Cancel query after 30 seconds
+  query_timeout: 30000, // Query timeout
+  keepAlive: true, // Enable TCP keep-alive
+  keepAliveInitialDelayMillis: 10000, // Initial delay for keep-alive
 });
 
 // Storage implementation using PostgreSQL
@@ -924,6 +932,36 @@ export class PgStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error fetching daily spreads:", error);
+      throw error;
+    }
+  }
+  
+  async getDailySpreadsByDateRange(startDate: Date, endDate: Date): Promise<DailySpread[]> {
+    try {
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
+      const result = await pool.query(`
+        SELECT * FROM daily_spreads 
+        WHERE date >= $1 AND date <= $2
+        ORDER BY date ASC
+      `, [startDateStr, endDateStr]);
+      
+      return result.rows.map(row => ({
+        id: row.id,
+        date: row.date.toISOString().split('T')[0],
+        buyExchange: row.buy_exchange,
+        sellExchange: row.sell_exchange,
+        route: row.route,
+        highestSpread: row.highest_spread,
+        lowestSpread: row.lowest_spread,
+        averageSpread: row.average_spread,
+        dataPoints: row.data_points,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    } catch (error) {
+      console.error("Error fetching daily spreads by date range:", error);
       throw error;
     }
   }

@@ -13,14 +13,20 @@ export async function apiRequest<T = any>(
     method?: string;
     body?: string;
     headers?: Record<string, string>;
+    csrfToken?: string;
   } = {}
 ): Promise<T> {
-  const { method = "GET", body, headers = {} } = options;
+  const { method = "GET", body, headers = {}, csrfToken } = options;
   
   // Check for admin token in localStorage and add to headers
   const adminToken = localStorage.getItem('adminToken');
   if (adminToken) {
     headers['x-admin-token'] = adminToken;
+  }
+  
+  // Add CSRF token for state-changing requests
+  if (csrfToken && (method === 'POST' || method === 'PUT' || method === 'DELETE' || method === 'PATCH')) {
+    headers['X-CSRF-Token'] = csrfToken;
   }
   
   const res = await fetch(url, {

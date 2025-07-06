@@ -1256,9 +1256,9 @@ export default function Admin() {
 
   return (
     <Layout>
-      <div className="container mx-auto py-10">
+      <div className="container mx-auto py-10" data-testid="admin-dashboard">
         {/* User Stats Cards at the top */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8" data-testid="admin-stats">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -1321,7 +1321,7 @@ export default function Admin() {
         </div>
 
         <AdminNavigation activeTab={activeTab}>
-          <TabsContent value="users" className="mt-6">
+          <TabsContent value="users" className="mt-6" data-testid="user-management">
             <Card>
               <CardHeader className="pb-6">
                 <CardTitle>User Management</CardTitle>
@@ -1423,7 +1423,7 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="payments" className="mt-6">
+          <TabsContent value="payments" className="mt-6" data-testid="payment-analytics">
             <PaymentAnalyticsContent />
           </TabsContent>
           <TabsContent value="features" className="mt-6">

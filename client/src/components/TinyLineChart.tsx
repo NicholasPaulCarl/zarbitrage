@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatPercentage } from "@/lib/formatters";
 import { HistoricalSpread } from "@shared/schema";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DateRangePicker, DateRange } from "@/components/ui/date-range-picker";
 
 // Visx imports
 import { curveMonotoneX } from '@visx/curve';
@@ -426,10 +427,77 @@ const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
 // Main Chart Component
 export default function TinyLineChart({ period = '30d' }: { period?: string }) {
   const auth = useAuth();
+  
+  // State for date range with localStorage persistence
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    // Try to load from localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('spread-trends-date-range');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            from: parsed.from ? new Date(parsed.from) : subDays(new Date(), 30),
+            to: parsed.to ? new Date(parsed.to) : new Date()
+          };
+        }
+      } catch (error) {
+        console.warn('Failed to parse saved date range:', error);
+      }
+    }
+    
+    // Default to last 30 days
+    return {
+      from: subDays(new Date(), 30),
+      to: new Date()
+    };
+  });
+
+  // Save date range to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && dateRange.from && dateRange.to) {
+      try {
+        localStorage.setItem('spread-trends-date-range', JSON.stringify({
+          from: dateRange.from.toISOString(),
+          to: dateRange.to.toISOString()
+        }));
+      } catch (error) {
+        console.warn('Failed to save date range:', error);
+      }
+    }
+  }, [dateRange]);
+
+  // Build query parameters and URL based on date range or period
+  const { queryUrl, queryKey } = useMemo(() => {
+    if (dateRange.from && dateRange.to) {
+      const startDate = dateRange.from.toISOString().split('T')[0];
+      const endDate = dateRange.to.toISOString().split('T')[0];
+      const url = `/api/historical-spread?startDate=${startDate}&endDate=${endDate}`;
+      return {
+        queryUrl: url,
+        queryKey: [`/api/historical-spread`, 'custom', startDate, endDate]
+      };
+    }
+    const url = `/api/historical-spread?period=${period}`;
+    return {
+      queryUrl: url,
+      queryKey: [`/api/historical-spread`, 'period', period]
+    };
+  }, [dateRange, period]);
+
   const { data = [], isLoading } = useQuery<HistoricalSpread[]>({
-    queryKey: [`/api/historical-spread`, period],
+    queryKey,
+    queryFn: async () => {
+      const response = await fetch(queryUrl, {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    },
     enabled: true, // Enable for all users to see the chart
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
     refetchOnMount: true,
     refetchOnWindowFocus: false
   });
@@ -487,6 +555,13 @@ export default function TinyLineChart({ period = '30d' }: { period?: string }) {
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
+          <div className="flex-shrink-0">
+            <DateRangePicker 
+              dateRange={dateRange}
+              onChange={setDateRange}
+              className="w-[240px]"
+            />
+          </div>
         </div>
         <CardDescription className="text-xs text-gray-500">
           Displays spread percentage trends over time

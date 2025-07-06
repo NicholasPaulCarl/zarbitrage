@@ -176,7 +176,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your username" {...field} />
+                        <Input placeholder="Enter your username" data-testid="username-input" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -189,7 +189,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="••••••••" data-testid="password-input" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -199,6 +199,7 @@ export default function Login() {
                   type="submit" 
                   className="w-full" 
                   disabled={isSubmitting}
+                  data-testid="login-submit-button"
                 >
                   {isSubmitting ? (
                     <>

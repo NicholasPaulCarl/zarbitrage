@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useCSRF } from '@/hooks/useCSRF';
 
 interface User {
   id: number;
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { csrfToken, refreshToken } = useCSRF();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -110,7 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const userData = await apiRequest<LoginResponse>('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
+        csrfToken: csrfToken || await refreshToken()
       });
       
       console.log('Login successful, user data:', userData);
@@ -144,7 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       const userData = await apiRequest<RegisterResponse>('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ username, email, password }),
+        csrfToken: csrfToken || await refreshToken()
       });
       
       // If payment is not required, log in immediately
@@ -197,7 +201,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Also attempt server-side logout (may fail if session is invalid)
       try {
         await apiRequest('/api/auth/logout', {
-          method: 'POST'
+          method: 'POST',
+          csrfToken: csrfToken || await refreshToken()
         });
       } catch (error) {
         console.log('Session logout failed, but continuing with client-side logout');

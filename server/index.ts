@@ -9,11 +9,55 @@ import path from 'path';
 import cors from 'cors';
 import pg from 'pg';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import Tokens from 'csrf';
+
+// Extend session type to include CSRF secret
+declare module 'express-session' {
+  interface SessionData {
+    csrfSecret?: string;
+  }
+}
 
 // Create session store with PostgreSQL for persistent sessions
 const PgSession = connectPgSimple(session);
 const pgPool = new pg.Pool({
   connectionString: process.env.DATABASE_URL
+});
+
+// Initialize CSRF protection
+const tokens = new Tokens();
+const csrfSecret = process.env.CSRF_SECRET || 'fallback-csrf-secret-change-in-production';
+
+// Rate limiting configuration - disabled for development and testing
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 10000 : 5, // Effectively unlimited for dev/testing
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: isDevelopment ? () => true : undefined, // Skip rate limiting completely in development
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 10000 : 100, // Effectively unlimited for dev/testing
+  message: 'Too many API requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: isDevelopment ? () => true : undefined, // Skip rate limiting completely in development
+});
+
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 10000 : 20, // Effectively unlimited for dev/testing
+  message: 'Too many admin requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: isDevelopment ? () => true : undefined, // Skip rate limiting completely in development
 });
 
 // Create session store - use PostgreSQL for production and memory store for dev if no DATABASE_URL
@@ -35,12 +79,37 @@ if (process.env.DATABASE_URL) {
 
 const app = express();
 
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Apply rate limiting
+app.use('/api/auth', authLimiter);
+app.use('/api/admin', adminLimiter);
+app.use('/api', apiLimiter);
+
 // Enable CORS with proper credentials support
 app.use(cors({
-  origin: true, // Allow requests from any origin in development
+  origin: process.env.NODE_ENV === 'production' ? 
+    process.env.ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'] : 
+    true, // Allow requests from any origin in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-CSRF-Token', 'CSRF-Token']
 }));
 
 // Trust the first proxy to ensure cookie settings work correctly
@@ -56,14 +125,14 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
 // Session configuration
 const isDevEnvironment = app.get("env") === "development";
 app.use(session({
-  secret: 'crypto-arbitrage-secret',
+  secret: process.env.SESSION_SECRET || 'crypto-arbitrage-secret-change-in-production',
   resave: false, 
   saveUninitialized: false,
   rolling: true, // Force the session identifier cookie to be set on every response
   store: sessionStore,
   name: 'arb.sid', // Set a specific cookie name
   cookie: { 
-    secure: false, // Turn off secure for testing on Replit, regardless of environment
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     httpOnly: true,
     sameSite: 'lax',
@@ -74,6 +143,30 @@ app.use(session({
 // Initialize Passport and restore authentication state from session
 app.use(passport.initialize());
 app.use(passport.session());
+
+// CSRF protection middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Skip CSRF for GET requests and API endpoints that don't modify data
+  if (req.method === 'GET' || req.path.startsWith('/api/prices') || req.path.startsWith('/api/arbitrage')) {
+    return next();
+  }
+
+  const token = req.body._csrf || req.headers['x-csrf-token'] || req.headers['csrf-token'];
+  const secret = req.session.csrfSecret || (req.session.csrfSecret = tokens.secretSync());
+
+  if (!token || !tokens.verify(secret, token)) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+
+  next();
+});
+
+// CSRF token endpoint
+app.get('/api/csrf-token', (req: Request, res: Response) => {
+  const secret = req.session.csrfSecret || (req.session.csrfSecret = tokens.secretSync());
+  const token = tokens.create(secret);
+  res.json({ csrfToken: token });
+});
 
 // Serve static files from public folder (for profile pictures)
 app.use(express.static(path.join(process.cwd(), 'public')));
@@ -128,15 +221,11 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
+  // ALWAYS serve the app on port 3000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  const port = 3000;
+  server.listen(port, "127.0.0.1", () => {
     log(`serving on port ${port}`);
   });
 })();

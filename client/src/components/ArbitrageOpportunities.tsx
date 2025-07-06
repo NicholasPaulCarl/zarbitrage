@@ -150,6 +150,7 @@ export default function ArbitrageOpportunities({
             isUpdated && "bg-blue-50"
           )} 
           data-opportunity-id={`${opportunity.buyExchange.toLowerCase()}-${opportunity.sellExchange.toLowerCase()}`}
+          data-testid="arbitrage-opportunity-row"
         >
           <td className="px-3 py-3 whitespace-nowrap text-xs md:text-sm font-medium text-gray-900">
             {opportunity.route}
@@ -301,7 +302,7 @@ export default function ArbitrageOpportunities({
   };
 
   return (
-    <div className="relative overflow-hidden mb-6 bg-white rounded-lg p-4">
+    <div className="relative overflow-hidden mb-6 bg-white rounded-lg p-4" data-testid="arbitrage-opportunities">
       {/* Refreshing indicator removed */}
       
       <div className="pb-3">

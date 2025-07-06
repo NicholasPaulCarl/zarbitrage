@@ -113,7 +113,7 @@ export class MemStorage implements IStorage {
     this.dailySpreads = new Map();
     this.blacklistedEmails = new Map();
     this.deletedUsers = [];
-    this.userCurrentId = 1;
+    this.userCurrentId = 4; // Start after the test users
     this.alertCurrentId = 1;
     this.featureRequestCurrentId = 1;
     this.dailySpreadCurrentId = 1;
@@ -136,13 +136,13 @@ export class MemStorage implements IStorage {
   
   // Initialize sample data for testing
   private initializeSampleData(): void {
-    // Create a test user account
-    const hashedPassword = bcrypt.hashSync('password123', 10);
+    // Create a test user account with Cypress-expected credentials
+    const userPassword = bcrypt.hashSync('user123', 10);
     this.users.set(1, {
       id: 1, 
-      username: 'testuser',
-      email: 'test@example.com',
-      password: hashedPassword,
+      username: 'user',
+      email: 'user@example.com',
+      password: userPassword,
       profilePicture: null,
       createdAt: new Date(),
       subscriptionActive: true,
@@ -153,7 +153,7 @@ export class MemStorage implements IStorage {
       deletedAt: null
     });
     
-    // Create an admin user account
+    // Create an admin user account with Cypress-expected credentials
     const adminPassword = bcrypt.hashSync('admin123', 10);
     this.users.set(2, {
       id: 2, 
@@ -166,6 +166,23 @@ export class MemStorage implements IStorage {
       subscriptionExpires: null,
       subscriptionPaymentId: null,
       isAdmin: true,
+      isDeleted: false,
+      deletedAt: null
+    });
+    
+    // Create an additional legacy test user for backwards compatibility
+    const legacyPassword = bcrypt.hashSync('password123', 10);
+    this.users.set(3, {
+      id: 3, 
+      username: 'testuser',
+      email: 'test@example.com',
+      password: legacyPassword,
+      profilePicture: null,
+      createdAt: new Date(),
+      subscriptionActive: true,
+      subscriptionExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      subscriptionPaymentId: 'legacy-test-payment-id',
+      isAdmin: false,
       isDeleted: false,
       deletedAt: null
     });

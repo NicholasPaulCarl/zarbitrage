@@ -188,9 +188,9 @@ export default function PriceComparison({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6" data-testid="price-comparison">
       {/* International Exchanges Card */}
-      <Card>
+      <Card data-testid="international-exchanges">
         <CardHeader className="pb-2">
           <CardTitle className="text-base md:text-lg flex items-center">
             <Globe className="h-5 w-5 text-primary mr-2" />
@@ -222,7 +222,7 @@ export default function PriceComparison({
       </Card>
 
       {/* South African Exchanges Card */}
-      <Card>
+      <Card data-testid="local-exchanges">
         <CardHeader className="pb-2">
           <CardTitle className="text-base md:text-lg flex items-center">
             <Flag className="h-5 w-5 text-primary mr-2" />

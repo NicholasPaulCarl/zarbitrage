@@ -385,7 +385,7 @@ export default function TradeJournalPage() {
   return (
     <Layout>
       <SubscriptionGuard featureName="Trading Journal">
-        <div className="container mx-auto py-6 space-y-6">
+        <div className="container mx-auto py-6 space-y-6" data-testid="trade-journal">
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
             <div>
@@ -395,7 +395,7 @@ export default function TradeJournalPage() {
               </p>
             </div>
             
-            <Button onClick={() => setIsNewTradeOpen(true)} className="gap-2">
+            <Button onClick={() => setIsNewTradeOpen(true)} className="gap-2" data-testid="add-trade-button">
               <Plus className="h-4 w-4" />
               Add Trade
             </Button>
