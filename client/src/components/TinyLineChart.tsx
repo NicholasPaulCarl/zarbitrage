@@ -4,11 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatPercentage } from "@/lib/formatters";
 import { HistoricalSpread } from "@shared/schema";
 import { format, parseISO, subDays } from "date-fns";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DateRangePicker, DateRange } from "@/components/ui/date-range-picker";
+import { Button } from "@/components/ui/button";
 
 // Visx imports
 import { curveMonotoneX } from '@visx/curve';
@@ -20,7 +17,7 @@ import { scaleLinear, scaleTime } from '@visx/scale';
 import { Tooltip as VisxTooltip, defaultStyles as defaultTooltipStyles } from '@visx/tooltip';
 import { ParentSize } from '@visx/responsive';
 
-// Helper functions
+// Helper functions - handles both daily dates and hourly timestamps
 const getDate = (d: HistoricalSpread) => new Date(d.date);
 const getHighValue = (d: HistoricalSpread) => d.highestSpread;
 const getLowValue = (d: HistoricalSpread) => {
@@ -29,8 +26,8 @@ const getLowValue = (d: HistoricalSpread) => {
   return typeof d.lowestSpread === 'number' ? d.lowestSpread : d.highestSpread;
 };
 
-// Constants
-const MARGIN = { top: 20, right: 20, bottom: 40, left: 40 };
+// Constants - Minimal margins for full-width effect
+const MARGIN = { top: 10, right: 0, bottom: 30, left: 30 };
 const PRIMARY_COLOR = "#FF007F";
 const SECONDARY_COLOR = "rgba(0, 128, 255, 0.8)";
 const TOOLTIP_STYLES = {
@@ -47,7 +44,7 @@ const TOOLTIP_STYLES = {
 };
 
 // Performance-optimized Chart component
-const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: number, height: number }) => {
+const Chart = ({ data, width, height, isHourlyData = false }: { data: HistoricalSpread[], width: number, height: number, isHourlyData?: boolean }) => {
   const [tooltip, setTooltip] = useState<{
     data: HistoricalSpread;
     x: number;
@@ -58,7 +55,7 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
   const innerWidth = width - MARGIN.left - MARGIN.right;
   const innerHeight = height - MARGIN.top - MARGIN.bottom;
 
-  // Process data - filter positive spreads and select best routes by date
+  // Process data - handle hourly vs daily data differently
   const sortedData = useMemo(() => {
     if (!data || data.length === 0) return [];
     
@@ -69,39 +66,72 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
       item.lowestSpread > 0
     );
     
-    // Group by date
-    const groupedByDate = new Map<string, HistoricalSpread[]>();
-    positiveSpreadData.forEach(item => {
-      const dateStr = item.date;
-      if (!groupedByDate.has(dateStr)) {
-        groupedByDate.set(dateStr, []);
-      }
-      groupedByDate.get(dateStr)?.push(item);
-    });
-    
-    // For each date, select the route with the highest average spread
-    const bestRoutesByDate: HistoricalSpread[] = [];
-    groupedByDate.forEach((items, date) => {
-      // Sort by average spread
-      items.sort((a, b) => {
-        const aLow = typeof a.lowestSpread === 'number' ? a.lowestSpread : a.highestSpread;
-        const bLow = typeof b.lowestSpread === 'number' ? b.lowestSpread : b.highestSpread;
-        const avgA = (a.highestSpread + aLow) / 2;
-        const avgB = (b.highestSpread + bLow) / 2;
-        return avgB - avgA; // Descending
+    if (isHourlyData) {
+      // For hourly data: group by hour timestamp and select best route per hour
+      const groupedByHour = new Map<string, HistoricalSpread[]>();
+      positiveSpreadData.forEach(item => {
+        const hourStr = item.date; // Full timestamp for hourly data
+        if (!groupedByHour.has(hourStr)) {
+          groupedByHour.set(hourStr, []);
+        }
+        groupedByHour.get(hourStr)?.push(item);
       });
       
-      // Take the best route
-      if (items.length > 0) {
-        bestRoutesByDate.push(items[0]);
-      }
-    });
-    
-    // Sort by date
-    return bestRoutesByDate.sort((a, b) => getDate(a).getTime() - getDate(b).getTime());
-  }, [data]);
+      // For each hour, select the route with the highest average spread
+      const bestRoutesByHour: HistoricalSpread[] = [];
+      groupedByHour.forEach((items, hour) => {
+        // Sort by average spread
+        items.sort((a, b) => {
+          const aLow = typeof a.lowestSpread === 'number' ? a.lowestSpread : a.highestSpread;
+          const bLow = typeof b.lowestSpread === 'number' ? b.lowestSpread : b.highestSpread;
+          const avgA = (a.highestSpread + aLow) / 2;
+          const avgB = (b.highestSpread + bLow) / 2;
+          return avgB - avgA; // Descending
+        });
+        
+        // Take the best route for this hour
+        if (items.length > 0) {
+          bestRoutesByHour.push(items[0]);
+        }
+      });
+      
+      // Sort by timestamp
+      return bestRoutesByHour.sort((a, b) => getDate(a).getTime() - getDate(b).getTime());
+    } else {
+      // For daily data: group by date and select best route per day (existing logic)
+      const groupedByDate = new Map<string, HistoricalSpread[]>();
+      positiveSpreadData.forEach(item => {
+        const dateStr = item.date;
+        if (!groupedByDate.has(dateStr)) {
+          groupedByDate.set(dateStr, []);
+        }
+        groupedByDate.get(dateStr)?.push(item);
+      });
+      
+      // For each date, select the route with the highest average spread
+      const bestRoutesByDate: HistoricalSpread[] = [];
+      groupedByDate.forEach((items, date) => {
+        // Sort by average spread
+        items.sort((a, b) => {
+          const aLow = typeof a.lowestSpread === 'number' ? a.lowestSpread : a.highestSpread;
+          const bLow = typeof b.lowestSpread === 'number' ? b.lowestSpread : b.highestSpread;
+          const avgA = (a.highestSpread + aLow) / 2;
+          const avgB = (b.highestSpread + bLow) / 2;
+          return avgB - avgA; // Descending
+        });
+        
+        // Take the best route
+        if (items.length > 0) {
+          bestRoutesByDate.push(items[0]);
+        }
+      });
+      
+      // Sort by date
+      return bestRoutesByDate.sort((a, b) => getDate(a).getTime() - getDate(b).getTime());
+    }
+  }, [data, isHourlyData]);
 
-  // Filter data based on screen width for responsive display
+  // Filter data based on data type - different logic for hourly vs daily
   const { filteredData, dataExtent } = useMemo(() => {
     if (sortedData.length === 0) {
       return {
@@ -119,16 +149,27 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
     const minDateOriginal = new Date(Math.min(...dates.map(d => d.getTime())));
     
-    // Ensure we always show at least 7 days, with more on larger screens
-    let daysToShow = 30; // Desktop default
-    if (width < 640) daysToShow = 14;  // Mobile - increased from 7 to 14
-    else if (width < 1024) daysToShow = 21; // Tablet - increased from 14 to 21
+    let filtered = sortedData;
+    let minX = minDateOriginal;
     
-    const cutoffDate = new Date(maxDate);
-    cutoffDate.setDate(cutoffDate.getDate() - daysToShow);
-    
-    // Apply filter
-    const filtered = sortedData.filter(d => getDate(d) >= cutoffDate);
+    if (isHourlyData) {
+      // For hourly data: show all 24 hours without filtering
+      // The API already provides exactly 24 hours with gap filling
+      filtered = sortedData;
+      minX = minDateOriginal;
+    } else {
+      // For daily data: use responsive filtering based on screen size
+      let daysToShow = 30; // Desktop default
+      if (width < 640) daysToShow = 14;  // Mobile
+      else if (width < 1024) daysToShow = 21; // Tablet
+      
+      const cutoffDate = new Date(maxDate);
+      cutoffDate.setDate(cutoffDate.getDate() - daysToShow);
+      
+      // Apply filter
+      filtered = sortedData.filter(d => getDate(d) >= cutoffDate);
+      minX = new Date(Math.max(minDateOriginal.getTime(), cutoffDate.getTime()));
+    }
     
     // Skip empty or insufficient data
     if (filtered.length === 0) {
@@ -144,20 +185,23 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
     }
     
     // Pre-calculate derived values for better performance
-    const minX = new Date(Math.max(minDateOriginal.getTime(), cutoffDate.getTime()));
     const highs = filtered.map(getHighValue);
     const lows = filtered.map(getLowValue);
+    
+    // For missing data (0% spreads), ensure we show a small positive range
+    const minY = Math.max(0, Math.min(...lows) - 0.3);
+    const maxY = Math.max(1, Math.max(...highs) + 0.3); // Ensure at least 1% max for visibility
     
     return {
       filteredData: filtered,
       dataExtent: {
-        minY: Math.max(0, Math.min(...lows) - 0.3),
-        maxY: Math.max(...highs) + 0.3,
+        minY,
+        maxY,
         minX,
         maxX: maxDate
       }
     };
-  }, [sortedData, width]);
+  }, [sortedData, width, isHourlyData]);
 
   // Create scales
   const xScale = useMemo(() => scaleTime({
@@ -232,96 +276,152 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
     <>
       <svg width={width} height={height}>
         <Group left={MARGIN.left} top={MARGIN.top}>
-          {/* Grid */}
+          {/* Minimal grid - only horizontal lines */}
           <GridRows
             scale={yScale}
             width={innerWidth}
             height={innerHeight}
-            stroke="#e0e0e0"
-            strokeOpacity={0.3}
-            strokeDasharray="3,3"
-            numTicks={5}
+            stroke="#f0f0f0"
+            strokeOpacity={0.5}
+            numTicks={3}
           />
           
-          {/* Y-axis */}
+          {/* Minimal Y-axis */}
           <AxisLeft
             scale={yScale}
             hideAxisLine
-            tickStroke="#e0e0e0"
-            numTicks={4}
+            hideTicks
+            numTicks={3}
             tickLabelProps={() => ({
-              fill: '#888',
-              fontSize: 10,
+              fill: '#999',
+              fontSize: 9,
               textAnchor: 'end',
               dy: '0.3em',
-              dx: -4
+              dx: -8
             })}
             tickFormat={(d) => `${d}%`}
           />
           
-          {/* X-axis - ensure we show ALL dates clearly */}
+          {/* Minimal X-axis - reduced ticks */}
           <AxisBottom
             scale={xScale}
             top={innerHeight}
             hideAxisLine
-            tickStroke="#e0e0e0"
+            hideTicks
             tickLabelProps={() => ({
-              fill: '#888',
-              fontSize: 10,
+              fill: '#999',
+              fontSize: 9,
               textAnchor: 'middle',
               dy: '1em'
             })}
-            tickFormat={(d) => format(new Date(d as number), 'MMM dd')}
-            tickValues={filteredData.map(d => getDate(d).getTime())} // Show a tick for each date point
+            tickFormat={(d) => {
+              const date = new Date(d as number);
+              return isHourlyData 
+                ? format(date, 'MMM dd HH:mm') 
+                : format(date, 'MMM dd');
+            }}
+            numTicks={Math.min(5, filteredData.length)}
           />
           
-          {/* High line - use pre-calculated values */}
+          {/* High line - with conditional styling for missing data */}
           <LinePath
             data={lineDataHigh}
             x={d => d.x}
             y={d => d.y}
-            stroke={PRIMARY_COLOR}
+            stroke={isHourlyData ? "#ccc" : PRIMARY_COLOR} // Grey for hourly (will be overridden by segments)
             strokeWidth={2.5}
             curve={curveMonotoneX}
+            opacity={isHourlyData ? 0.3 : 1}
           />
           
-          {/* Low line - use pre-calculated values */}
+          {/* Low line - with conditional styling for missing data */}
           <LinePath
             data={lineDataLow}
             x={d => d.x}
             y={d => d.y}
-            stroke={SECONDARY_COLOR}
+            stroke={isHourlyData ? "#ccc" : SECONDARY_COLOR} // Grey for hourly (will be overridden by segments)
             strokeWidth={1.5}
             curve={curveMonotoneX}
-            opacity={0.7}
+            opacity={isHourlyData ? 0.2 : 0.7}
           />
           
-          {/* High data points - only show a subset of points based on screen size */}
-          {displayPoints.map((d, i) => (
-            <circle
-              key={`high-point-${i}`}
-              cx={xScale(getDate(d))}
-              cy={yScale(getHighValue(d))}
-              r={3.5}
-              fill="white"
-              stroke={PRIMARY_COLOR}
-              strokeWidth={1.5}
-            />
-          ))}
+          {/* Real data segments - only for hourly data with actual values */}
+          {isHourlyData && lineDataHigh.map((d, i) => {
+            if (i === 0 || !d.data) return null;
+            const prevPoint = lineDataHigh[i - 1];
+            if (!prevPoint.data) return null;
+            
+            // Draw colored segments for real data (non-zero spreads), grey for missing data (zero spreads)
+            const hasRealData = d.data.highestSpread > 0 && prevPoint.data.highestSpread > 0;
+            const strokeColor = hasRealData ? PRIMARY_COLOR : "#ccc";
+            const strokeOpacity = hasRealData ? 1 : 0.3;
+            
+            return (
+              <line
+                key={`real-high-${i}`}
+                x1={prevPoint.x}
+                y1={prevPoint.y}
+                x2={d.x}
+                y2={d.y}
+                stroke={strokeColor}
+                strokeWidth={2.5}
+                opacity={strokeOpacity}
+              />
+            );
+          })}
           
-          {/* Low data points - only show a subset */}
-          {displayPoints.map((d, i) => (
-            <circle
-              key={`low-point-${i}`}
-              cx={xScale(getDate(d))}
-              cy={yScale(getLowValue(d))}
-              r={2.5}
-              fill="white"
-              stroke={SECONDARY_COLOR}
-              strokeWidth={1}
-              opacity={0.7}
-            />
-          ))}
+          {isHourlyData && lineDataLow.map((d, i) => {
+            if (i === 0 || !d.data) return null;
+            const prevPoint = lineDataLow[i - 1];
+            if (!prevPoint.data) return null;
+            
+            // Draw colored segments for real data (non-zero spreads), grey for missing data (zero spreads)
+            const hasRealData = d.data.lowestSpread > 0 && prevPoint.data.lowestSpread > 0;
+            const strokeColor = hasRealData ? SECONDARY_COLOR : "#ccc";
+            const strokeOpacity = hasRealData ? 0.7 : 0.2;
+            
+            return (
+              <line
+                key={`real-low-${i}`}
+                x1={prevPoint.x}
+                y1={prevPoint.y}
+                x2={d.x}
+                y2={d.y}
+                stroke={strokeColor}
+                strokeWidth={1.5}
+                opacity={strokeOpacity}
+              />
+            );
+          })}
+          
+          {/* Data points with conditional styling for missing data */}
+          {displayPoints.map((d, i) => {
+            const isMissingData = d.highestSpread === 0;
+            return (
+              <circle
+                key={`high-point-${i}`}
+                cx={xScale(getDate(d))}
+                cy={yScale(getHighValue(d))}
+                r={isMissingData ? 1 : 2}
+                fill={isMissingData ? "#ccc" : PRIMARY_COLOR}
+                opacity={isMissingData ? 0.3 : (isHourlyData ? 0.8 : 0.6)}
+              />
+            );
+          })}
+          
+          {displayPoints.map((d, i) => {
+            const isMissingData = d.lowestSpread === 0;
+            return (
+              <circle
+                key={`low-point-${i}`}
+                cx={xScale(getDate(d))}
+                cy={yScale(getLowValue(d))}
+                r={isMissingData ? 1 : 1.5}
+                fill={isMissingData ? "#ccc" : SECONDARY_COLOR}
+                opacity={isMissingData ? 0.2 : (isHourlyData ? 0.6 : 0.4)}
+              />
+            );
+          })}
           
           {/* Interaction layer */}
           <rect
@@ -343,30 +443,30 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
         <VisxTooltip
           top={tooltip.y}
           left={tooltip.x}
-          style={TOOLTIP_STYLES}
+          style={{
+            ...TOOLTIP_STYLES,
+            padding: '6px 8px',
+            fontSize: '11px',
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px'
+          }}
         >
-          <div>
-            <div className="text-sm font-semibold">
-              {format(getDate(tooltip.data), 'MMM d, yyyy')}
+          <div className="text-center">
+            <div className="text-xs font-medium mb-1">
+              {isHourlyData 
+                ? format(getDate(tooltip.data), 'MMM d HH:mm') 
+                : format(getDate(tooltip.data), 'MMM d')}
             </div>
-            <div className="mt-2">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-xs">High:</span>
-                <span className="font-semibold" style={{ color: PRIMARY_COLOR }}>
-                  {formatPercentage(tooltip.data.highestSpread)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 mt-1">
-                <span className="text-xs">Low:</span>
-                <span className="font-semibold" style={{ color: SECONDARY_COLOR }}>
-                  {tooltip.data.lowestSpread && tooltip.data.lowestSpread < tooltip.data.highestSpread
-                    ? formatPercentage(tooltip.data.lowestSpread)
-                    : formatPercentage(getLowValue(tooltip.data))}
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                <span className="font-medium">Route:</span> {tooltip.data.route}
-              </div>
+            <div className="text-xs">
+              <span style={{ color: PRIMARY_COLOR }}>High: {formatPercentage(tooltip.data.highestSpread)}</span>
+              <br />
+              <span style={{ color: SECONDARY_COLOR }}>Low: {
+                tooltip.data.lowestSpread && tooltip.data.lowestSpread < tooltip.data.highestSpread
+                  ? formatPercentage(tooltip.data.lowestSpread)
+                  : formatPercentage(getLowValue(tooltip.data))
+              }</span>
             </div>
           </div>
         </VisxTooltip>
@@ -375,115 +475,93 @@ const Chart = ({ data, width, height }: { data: HistoricalSpread[], width: numbe
   );
 };
 
-// Skeleton for loading state
+// Skeleton for loading state - minimal version
 const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
   <div className="w-full" style={{ height }}>
-    <div className="flex justify-between text-xs text-gray-500 mb-1">
-      <div>Monthly High: <Skeleton className="inline-block h-3 w-12" /></div>
-      <div>Monthly Low: <Skeleton className="inline-block h-3 w-12" /></div>
-    </div>
-    <div className="relative h-[90%]">
-      <div className="absolute inset-0 bg-gray-50 rounded-md"></div>
+    <div className="relative h-full">
+      <div className="absolute inset-0 bg-gray-50/30"></div>
       
-      <div className="absolute inset-x-0 top-1/4 border-b border-dashed border-gray-200 w-full"></div>
-      <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-gray-200 w-full"></div>
-      <div className="absolute inset-x-0 top-3/4 border-b border-dashed border-gray-200 w-full"></div>
+      <div className="absolute inset-x-0 top-1/4 border-b border-dashed border-gray-200/50 w-full"></div>
+      <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-gray-200/50 w-full"></div>
+      <div className="absolute inset-x-0 top-3/4 border-b border-dashed border-gray-200/50 w-full"></div>
       
       <div className="absolute top-0 bottom-0 left-5 flex flex-col justify-between py-4">
-        <Skeleton className="h-3 w-8" />
-        <Skeleton className="h-3 w-8" />
-        <Skeleton className="h-3 w-8" />
-        <Skeleton className="h-3 w-8" />
+        <Skeleton className="h-2 w-6" />
+        <Skeleton className="h-2 w-6" />
+        <Skeleton className="h-2 w-6" />
+        <Skeleton className="h-2 w-6" />
       </div>
       
-      <div className="absolute inset-x-0 top-4 bottom-8 mx-10">
+      <div className="absolute inset-x-0 top-4 bottom-8 mx-5">
         <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
           <path 
             d="M0,40 C10,30 20,35 30,25 C40,15 50,20 60,15 C70,10 80,5 90,10 L100,15" 
             fill="none" 
             stroke="#FF007F" 
             strokeWidth="2"
+            opacity="0.3"
           />
           <path 
             d="M0,45 C10,40 20,42 30,35 C40,30 50,32 60,28 C70,25 80,20 90,22 L100,25" 
             fill="none" 
             stroke="rgba(0, 128, 255, 0.8)" 
             strokeWidth="1.5"
-            opacity="0.7"
+            opacity="0.2"
           />
         </svg>
       </div>
       
-      <div className="absolute bottom-0 inset-x-0 flex justify-between px-10">
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="h-3 w-12" />
+      <div className="absolute bottom-0 inset-x-0 flex justify-between px-5">
+        <Skeleton className="h-2 w-8" />
+        <Skeleton className="h-2 w-8" />
+        <Skeleton className="h-2 w-8" />
+        <Skeleton className="h-2 w-8" />
       </div>
     </div>
   </div>
 );
 
 // Main Chart Component
-export default function TinyLineChart({ period = '30d' }: { period?: string }) {
+export default function TinyLineChart({ period = '7d' }: { period?: string }) {
   const auth = useAuth();
   
-  // State for date range with localStorage persistence
-  const [dateRange, setDateRange] = useState<DateRange>(() => {
+  // Period state - Daily (7d), Weekly (30d), or Monthly (90d)
+  const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d'>(() => {
     // Try to load from localStorage
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('spread-trends-date-range');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          return {
-            from: parsed.from ? new Date(parsed.from) : subDays(new Date(), 30),
-            to: parsed.to ? new Date(parsed.to) : new Date()
-          };
+        const saved = localStorage.getItem('spread-trends-period');
+        if (saved && (saved === '7d' || saved === '30d' || saved === '90d')) {
+          return saved as '7d' | '30d' | '90d';
         }
       } catch (error) {
-        console.warn('Failed to parse saved date range:', error);
+        console.warn('Failed to parse saved period:', error);
       }
     }
-    
-    // Default to last 30 days
-    return {
-      from: subDays(new Date(), 30),
-      to: new Date()
-    };
+    return '7d'; // Default to daily view
   });
 
-  // Save date range to localStorage when it changes
+  // Save period to localStorage when it changes
   useEffect(() => {
-    if (typeof window !== 'undefined' && dateRange.from && dateRange.to) {
+    if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('spread-trends-date-range', JSON.stringify({
-          from: dateRange.from.toISOString(),
-          to: dateRange.to.toISOString()
-        }));
+        localStorage.setItem('spread-trends-period', selectedPeriod);
       } catch (error) {
-        console.warn('Failed to save date range:', error);
+        console.warn('Failed to save period:', error);
       }
     }
-  }, [dateRange]);
+  }, [selectedPeriod]);
 
-  // Build query parameters and URL based on date range or period
+  // Build query parameters and URL based on selected period
   const { queryUrl, queryKey } = useMemo(() => {
-    if (dateRange.from && dateRange.to) {
-      const startDate = dateRange.from.toISOString().split('T')[0];
-      const endDate = dateRange.to.toISOString().split('T')[0];
-      const url = `/api/historical-spread?startDate=${startDate}&endDate=${endDate}`;
-      return {
-        queryUrl: url,
-        queryKey: [`/api/historical-spread`, 'custom', startDate, endDate]
-      };
-    }
-    const url = `/api/historical-spread?period=${period}`;
+    // Daily view (7d) should use hourly granularity, others use daily
+    const granularity = selectedPeriod === '7d' ? 'hour' : 'day';
+    const url = `/api/historical-spread?period=${selectedPeriod}&granularity=${granularity}`;
     return {
       queryUrl: url,
-      queryKey: [`/api/historical-spread`, 'period', period]
+      queryKey: [`/api/historical-spread`, 'period', selectedPeriod, granularity]
     };
-  }, [dateRange, period]);
+  }, [selectedPeriod]);
 
   const { data = [], isLoading } = useQuery<HistoricalSpread[]>({
     queryKey,
@@ -504,108 +582,73 @@ export default function TinyLineChart({ period = '30d' }: { period?: string }) {
 
 
   
-  // Calculate high/low summary metrics
-  const { monthlyHigh, monthlyLow } = useMemo(() => {
-    if (!data || data.length === 0) return { monthlyHigh: 0, monthlyLow: 0 };
-    
-    // Filter to only positive spread items with valid lowest values
-    const validItems = data.filter(item => 
-      item.highestSpread > 0 && 
-      typeof item.lowestSpread === 'number' && 
-      item.lowestSpread > 0
-    );
-    
-    if (validItems.length === 0) return { monthlyHigh: 0, monthlyLow: 0 };
-    
-    const high = Math.max(...validItems.map(item => item.highestSpread));
-    
-    // Find the lowest that isn't equal to highest (if available)
-    const validLows = validItems.filter(item => 
-      typeof item.lowestSpread === 'number' && 
-      item.lowestSpread < item.highestSpread
-    );
-    
-    const low = validLows.length > 0
-      ? Math.min(...validLows.map(item => item.lowestSpread as number))
-      : high * 0.9; // Fallback to 90% of high if all lows equal highest
-    
-    return { monthlyHigh: high, monthlyLow: low };
-  }, [data]);
+  // Period toggle handler
+  const handlePeriodChange = (period: '7d' | '30d' | '90d') => {
+    setSelectedPeriod(period);
+  };
   
   return (
-    <Card className="bg-white shadow-none border-none rounded-lg">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            Spread Trends
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info size={16} className="text-gray-400 cursor-pointer" />
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p className="max-w-xs">
-                    Shows highest and lowest daily spread percentages over time.
-                    <br /><br />
-                    <span className="text-primary font-semibold">Pink line</span>: Highest daily spread
-                    <br />
-                    <span style={{ color: "rgba(0, 128, 255, 0.8)" }} className="font-semibold">Blue line</span>: Lowest daily spread
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </CardTitle>
-          <div className="flex-shrink-0">
-            <DateRangePicker 
-              dateRange={dateRange}
-              onChange={setDateRange}
-              className="w-[240px]"
-            />
-          </div>
+    <div className="w-full mb-6">
+      {/* Minimal header with title and period toggle */}
+      <div className="flex items-center justify-between mb-4 px-2">
+        <h3 className="text-lg font-semibold text-gray-900">Spread Trends</h3>
+        <div className="flex rounded-lg bg-gray-100 p-1">
+          <Button
+            variant={selectedPeriod === '7d' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => handlePeriodChange('7d')}
+          >
+            Daily
+          </Button>
+          <Button
+            variant={selectedPeriod === '30d' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => handlePeriodChange('30d')}
+          >
+            Weekly
+          </Button>
+          <Button
+            variant={selectedPeriod === '90d' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => handlePeriodChange('90d')}
+          >
+            Monthly
+          </Button>
         </div>
-        <CardDescription className="text-xs text-gray-500">
-          Displays spread percentage trends over time
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]">
-          {isLoading || !data ? (
-            <ChartSkeleton height={250} />
-          ) : (
-            <>
-              {data.length > 0 && (
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <div>Monthly High: <span className="font-bold text-primary">{formatPercentage(monthlyHigh)}</span></div>
-                  <div>Monthly Low: <span className="font-bold" style={{ color: "rgba(0, 128, 255, 0.8)" }}>
-                    {formatPercentage(monthlyLow)}
-                  </span></div>
-                </div>
-              )}
-              <div className="relative" style={{ height: '90%' }}>
-                {data.length < 3 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                    <p className="text-gray-500 text-sm mb-2">Limited historical data available</p>
-                    <p className="text-xs text-gray-400">
-                      The chart requires more historical data to display trends properly.
-                      <br />As you continue using the platform, more data will be collected.
-                    </p>
-                  </div>
-                ) : (
-                  <ParentSize>
-                    {({ width, height }) => (
-                      <Chart 
-                        data={data} 
-                        width={width} 
-                        height={height} 
-                      />
-                    )}
-                  </ParentSize>
-                )}
+      </div>
+      
+      {/* Full-width chart */}
+      <div className="h-[250px] w-full">
+        {isLoading || !data ? (
+          <ChartSkeleton height={250} />
+        ) : (
+          <div className="relative h-full w-full">
+            {data.length < 3 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                <p className="text-gray-500 text-sm mb-2">Limited historical data available</p>
+                <p className="text-xs text-gray-400">
+                  The chart requires more historical data to display trends properly.
+                  <br />As you continue using the platform, more data will be collected.
+                </p>
               </div>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            ) : (
+              <ParentSize>
+                {({ width, height }) => (
+                  <Chart 
+                    data={data} 
+                    width={width} 
+                    height={height} 
+                    isHourlyData={selectedPeriod === '7d'}
+                  />
+                )}
+              </ParentSize>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

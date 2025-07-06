@@ -1400,16 +1400,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exchangeRate.rate
       );
 
-      // Record spread data for each opportunity
+      // Record spread data for each opportunity (both daily and hourly)
       try {
         // Process in background
         opportunities.forEach(opportunity => {
+          // Record daily spread data
           dbStorage.recordSpreadData(
             opportunity.buyExchange,
             opportunity.sellExchange,
             opportunity.spreadPercentage
           ).catch(err => {
-            console.error(`Error recording spread data for ${opportunity.route}:`, err);
+            console.error(`Error recording daily spread data for ${opportunity.route}:`, err);
+          });
+          
+          // Record hourly spread data
+          dbStorage.recordHourlySpreadData(
+            opportunity.buyExchange,
+            opportunity.sellExchange,
+            opportunity.spreadPercentage
+          ).catch(err => {
+            console.error(`Error recording hourly spread data for ${opportunity.route}:`, err);
           });
         });
       } catch (recordError) {
@@ -1463,10 +1473,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Historical spread endpoint called");
 
-      // Get parameters from query - support both period and custom date range
+      // Get parameters from query - support both period and custom date range, plus granularity
       const period = req.query.period as string;
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
+      const granularity = req.query.granularity as string; // 'hour' or 'day'
 
       // Validate date range parameters if provided
       let dateRange: { start: Date; end: Date } | null = null;
@@ -1501,28 +1512,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use custom date range if provided, otherwise fall back to period
       const queryParam = dateRange ? `${dateRange.start.toISOString().split('T')[0]}_${dateRange.end.toISOString().split('T')[0]}` : (period || "7d");
 
-      // Use the new daily_spreads table to get accurate historical data
-      const dailySpreads = dateRange 
-        ? await dbStorage.getDailySpreadsByDateRange(dateRange.start, dateRange.end)
-        : await dbStorage.getDailySpreads(period);
-      console.log(`Retrieved ${dailySpreads.length} daily spread records from database`);
+      // Determine if we should use hourly or daily data
+      // Daily view (7d) should show hourly data, Weekly/Monthly should show daily data
+      const shouldUseHourlyData = granularity === 'hour' || (!granularity && period === '7d');
+      
+      let spreadsData: any[] = [];
+      
+      if (shouldUseHourlyData) {
+        // Fetch hourly data
+        if (dateRange) {
+          spreadsData = await dbStorage.getHourlySpreadsByDateRange(dateRange.start, dateRange.end);
+        } else {
+          // For hourly data, show exactly 24 hours for daily view
+          const hours = period === '7d' ? 24 : 24;
+          spreadsData = await dbStorage.getHourlySpreads(hours);
+        }
+        console.log(`Retrieved ${spreadsData.length} hourly spread records from database`);
+      } else {
+        // Fetch daily data
+        const dailySpreads = dateRange 
+          ? await dbStorage.getDailySpreadsByDateRange(dateRange.start, dateRange.end)
+          : await dbStorage.getDailySpreads(period);
+        spreadsData = dailySpreads;
+        console.log(`Retrieved ${spreadsData.length} daily spread records from database`);
+      }
 
       // Check if we have reasonable historical coverage
-      const uniqueDates = new Set(dailySpreads.map(spread => spread.date));
-      const requestedDays = dateRange 
-        ? Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        : parseInt(period?.replace('d', '') || '7');
+      let uniqueDates: Set<string>;
+      let requestedTimeUnits: number;
+      
+      if (shouldUseHourlyData) {
+        // For hourly data, extract unique dates from hourTimestamp
+        uniqueDates = new Set(spreadsData.map(spread => spread.hourTimestamp?.split('T')[0] || ''));
+        requestedTimeUnits = dateRange 
+          ? Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60)) // hours
+          : 24; // Default 24 hours for daily view
+      } else {
+        // For daily data, use existing logic
+        uniqueDates = new Set(spreadsData.map(spread => spread.date));
+        requestedTimeUnits = dateRange 
+          ? Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+          : parseInt(period?.replace('d', '') || '7');
+      }
       
       // Use real data only if we have coverage for at least 30% of requested period
-      const coverageRatio = uniqueDates.size / requestedDays;
-      const hasGoodCoverage = dailySpreads.length > 0 && coverageRatio >= 0.3;
+      const coverageRatio = spreadsData.length > 0 ? uniqueDates.size / Math.max(1, requestedTimeUnits) : 0;
+      const hasGoodCoverage = spreadsData.length > 0 && coverageRatio >= 0.3;
 
-      console.log(`Date coverage: ${uniqueDates.size}/${requestedDays} days (${(coverageRatio * 100).toFixed(1)}%)`);
+      console.log(`Data coverage: ${uniqueDates.size}/${requestedTimeUnits} ${shouldUseHourlyData ? 'hours' : 'days'} (${(coverageRatio * 100).toFixed(1)}%)`);
 
-      // If we have good historical coverage, use real data
+      // If we have good historical coverage, use real data with gap filling for hourly
       if (hasGoodCoverage) {
         // Format and validate data for frontend
-        const historicalData: HistoricalSpread[] = dailySpreads.map(spread => {
+        let historicalData: HistoricalSpread[] = spreadsData.map(spread => {
+          // Handle both hourly and daily data formats
+          const dateValue = shouldUseHourlyData ? spread.hourTimestamp : spread.date;
+          
           // Validate spread data from database
           let lowestSpread = spread.lowestSpread;
           if (typeof lowestSpread !== 'number' || lowestSpread >= spread.highestSpread) {
@@ -1531,20 +1576,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           return {
-            date: spread.date,
+            date: shouldUseHourlyData ? spread.hourTimestamp : spread.date,
             highestSpread: spread.highestSpread,
             lowestSpread: lowestSpread,
             route: spread.route
           };
         });
 
-        console.log(`Returning ${historicalData.length} historical data points from daily_spreads table`);
-        console.log("Data generation method: Database with validation");
+        // For hourly data, fill gaps with 0% defaults for complete 24-hour timeline
+        if (shouldUseHourlyData && period === '7d') {
+          const now = new Date();
+          const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+          
+          // Create complete hourly timeline
+          const completeTimeline: HistoricalSpread[] = [];
+          const existingDataMap = new Map<string, HistoricalSpread>();
+          
+          // Map existing data by hour timestamp
+          historicalData.forEach(item => {
+            const hourKey = new Date(item.date).toISOString().split(':')[0] + ':00:00.000Z';
+            existingDataMap.set(hourKey, item);
+          });
+          
+          // Generate 24 hours of data
+          for (let i = 0; i < 24; i++) {
+            const hourTimestamp = new Date(twentyFourHoursAgo.getTime() + (i * 60 * 60 * 1000));
+            const hourKey = hourTimestamp.toISOString().split(':')[0] + ':00:00.000Z';
+            
+            if (existingDataMap.has(hourKey)) {
+              // Use real data
+              completeTimeline.push(existingDataMap.get(hourKey)!);
+            } else {
+              // Fill gap with 0% default
+              completeTimeline.push({
+                date: hourTimestamp.toISOString(),
+                highestSpread: 0,
+                lowestSpread: 0,
+                route: 'No Data Available'
+              });
+            }
+          }
+          
+          historicalData = completeTimeline;
+        }
+
+        console.log(`Returning ${historicalData.length} historical data points from ${shouldUseHourlyData ? 'hourly_spreads' : 'daily_spreads'} table`);
+        console.log("Data generation method: Database with validation" + (shouldUseHourlyData ? " and gap filling" : ""));
         res.json(historicalData);
         return;
       }
 
-      console.log(`Insufficient historical coverage (${uniqueDates.size}/${requestedDays} days, ${(coverageRatio * 100).toFixed(1)}%), generating realistic data`);;
+      console.log(`Insufficient historical coverage (${uniqueDates.size}/${requestedTimeUnits} ${shouldUseHourlyData ? 'hours' : 'days'}, ${(coverageRatio * 100).toFixed(1)}%), generating realistic data`);;
 
       // Generate realistic historical data based on current market conditions
       console.log("No data in daily_spreads table, generating realistic historical data");
@@ -1605,75 +1687,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const historicalData: HistoricalSpread[] = [];
 
-        // Generate data for each day in the range
-        const currentDate = new Date(startDateForGeneration);
-        let dayIndex = 0;
-        
-        while (currentDate <= endDateForGeneration) {
-          const dateStr = currentDate.toISOString().split('T')[0];
-          const dayOfWeek = currentDate.getDay();
-          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        // Generate data based on whether hourly or daily data is requested
+        if (shouldUseHourlyData && period === '7d') {
+          // Generate hourly data for the last 24 hours
+          const now = new Date();
+          const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
           
-          // Create seeded random for consistent but varied data
-          const daysSinceEpoch = Math.floor(currentDate.getTime() / (1000 * 60 * 60 * 24));
-          const seededRandom = (seed: number) => {
-            const x = Math.sin(seed + daysSinceEpoch) * 10000;
-            return x - Math.floor(x);
-          };
+          for (let i = 0; i < 24; i++) {
+            const hourTimestamp = new Date(twentyFourHoursAgo.getTime() + (i * 60 * 60 * 1000));
+            const hourIndex = i;
+            
+            // Create seeded random for consistent but varied data
+            const hoursSinceEpoch = Math.floor(hourTimestamp.getTime() / (1000 * 60 * 60));
+            const seededRandom = (seed: number) => {
+              const x = Math.sin(seed + hoursSinceEpoch) * 10000;
+              return x - Math.floor(x);
+            };
 
-          // Use current best opportunity as base, with realistic daily variation
-          if (currentOpportunities.length > 0) {
-            const bestOpportunity = currentOpportunities[0];
-            
-            // Market volatility patterns
-            const volatilityMultiplier = isWeekend ? 0.8 : 1.0;
-            const baseSpread = bestOpportunity.spreadPercentage;
-            
-            // More sophisticated variation using market patterns
-            const trendCycle = Math.sin((dayIndex / 14) * Math.PI) * 0.3; // 2-week cycle
-            const dailyNoise = (seededRandom(dayIndex) - 0.5) * 0.6; // Daily randomness
-            const weekendEffect = isWeekend ? -0.2 : 0; // Lower spreads on weekends
-            
-            const totalVariation = (trendCycle + dailyNoise + weekendEffect) * volatilityMultiplier;
-            
-            // Calculate realistic high and low spreads based on current market conditions
-            const adjustedBase = Math.max(0.3, baseSpread + totalVariation); // Lower floor to match real data
-            const highSpread = adjustedBase + (seededRandom(dayIndex + 100) * 0.4); // Reduced variation range
-            const lowSpread = Math.max(0.1, adjustedBase - (seededRandom(dayIndex + 200) * 0.3)); // Reduced variation
-            
-            // Ensure realistic spread ranges without artificial floors
-            const dailyHigh = Math.max(adjustedBase + 0.1, highSpread); // Small minimum above base
-            const dailyLow = Math.max(0.1, Math.min(lowSpread, dailyHigh - 0.05)); // Small gap requirement
+            // Use current best opportunity as base, with realistic hourly variation
+            if (currentOpportunities.length > 0) {
+              const bestOpportunity = currentOpportunities[0];
+              
+              // Market volatility patterns - more volatile than daily
+              const baseSpread = bestOpportunity.spreadPercentage;
+              
+              // Hourly variation patterns
+              const trendCycle = Math.sin((hourIndex / 6) * Math.PI) * 0.2; // 6-hour cycle
+              const hourlyNoise = (seededRandom(hourIndex) - 0.5) * 0.4; // Hourly randomness
+              const timeOfDayEffect = Math.sin((hourIndex / 24) * 2 * Math.PI) * 0.1; // 24-hour cycle
+              
+              const totalVariation = trendCycle + hourlyNoise + timeOfDayEffect;
+              
+              // Calculate realistic high and low spreads
+              const adjustedBase = Math.max(0.3, baseSpread + totalVariation);
+              const highSpread = adjustedBase + (seededRandom(hourIndex + 100) * 0.3);
+              const lowSpread = Math.max(0.1, adjustedBase - (seededRandom(hourIndex + 200) * 0.2));
+              
+              // Ensure realistic spread ranges
+              const hourlyHigh = Math.max(adjustedBase + 0.05, highSpread);
+              const hourlyLow = Math.max(0.1, Math.min(lowSpread, hourlyHigh - 0.05));
 
-            historicalData.push({
-              date: dateStr,
-              highestSpread: Number(dailyHigh.toFixed(2)),
-              lowestSpread: Number(dailyLow.toFixed(2)),
-              route: bestOpportunity.route
-            });
-          } else {
-            // Fallback with realistic spread values based on typical market conditions
-            const volatilityMultiplier = isWeekend ? 0.8 : 1.0;
-            const trendCycle = Math.sin((dayIndex / 10) * Math.PI) * 0.2; // Reduced amplitude
-            const baseSpread = 0.6 + trendCycle + (seededRandom(dayIndex) * 0.3); // Realistic base around 0.6%
-            
-            const highSpread = (baseSpread + seededRandom(dayIndex + 50) * 0.3) * volatilityMultiplier;
-            const lowSpread = (baseSpread - seededRandom(dayIndex + 150) * 0.2) * volatilityMultiplier;
-            
-            const dailyHigh = Math.max(baseSpread + 0.1, highSpread);
-            const dailyLow = Math.max(0.1, Math.min(lowSpread, dailyHigh - 0.05));
+              // Occasionally create gaps for testing (every 6th hour)
+              if (i % 6 === 2) {
+                // Create a gap to test missing data visualization
+                historicalData.push({
+                  date: hourTimestamp.toISOString(),
+                  highestSpread: 0,
+                  lowestSpread: 0,
+                  route: 'No Data Available'
+                });
+              } else {
+                historicalData.push({
+                  date: hourTimestamp.toISOString(),
+                  highestSpread: Number(hourlyHigh.toFixed(2)),
+                  lowestSpread: Number(hourlyLow.toFixed(2)),
+                  route: bestOpportunity.route
+                });
+              }
+            } else {
+              // Fallback with realistic spread values
+              const trendCycle = Math.sin((hourIndex / 6) * Math.PI) * 0.15;
+              const baseSpread = 0.6 + trendCycle + (seededRandom(hourIndex) * 0.2);
+              
+              const highSpread = baseSpread + seededRandom(hourIndex + 50) * 0.2;
+              const lowSpread = baseSpread - seededRandom(hourIndex + 150) * 0.15;
+              
+              const hourlyHigh = Math.max(baseSpread + 0.05, highSpread);
+              const hourlyLow = Math.max(0.1, Math.min(lowSpread, hourlyHigh - 0.05));
 
-            historicalData.push({
-              date: dateStr,
-              highestSpread: Number(dailyHigh.toFixed(2)),
-              lowestSpread: Number(dailyLow.toFixed(2)),
-              route: "Binance → AltcoinTrader"
-            });
+              // Occasionally create gaps for testing (every 6th hour)
+              if (i % 6 === 2) {
+                // Create a gap to test missing data visualization
+                historicalData.push({
+                  date: hourTimestamp.toISOString(),
+                  highestSpread: 0,
+                  lowestSpread: 0,
+                  route: 'No Data Available'
+                });
+              } else {
+                historicalData.push({
+                  date: hourTimestamp.toISOString(),
+                  highestSpread: Number(hourlyHigh.toFixed(2)),
+                  lowestSpread: Number(hourlyLow.toFixed(2)),
+                  route: "Binance → AltcoinTrader"
+                });
+              }
+            }
           }
+        } else {
+          // Generate daily data for longer periods
+          const currentDate = new Date(startDateForGeneration);
+          let dayIndex = 0;
           
-          // Move to next day
-          currentDate.setDate(currentDate.getDate() + 1);
-          dayIndex++;
+          while (currentDate <= endDateForGeneration) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const dayOfWeek = currentDate.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            
+            // Create seeded random for consistent but varied data
+            const daysSinceEpoch = Math.floor(currentDate.getTime() / (1000 * 60 * 60 * 24));
+            const seededRandom = (seed: number) => {
+              const x = Math.sin(seed + daysSinceEpoch) * 10000;
+              return x - Math.floor(x);
+            };
+
+            // Use current best opportunity as base, with realistic daily variation
+            if (currentOpportunities.length > 0) {
+              const bestOpportunity = currentOpportunities[0];
+              
+              // Market volatility patterns
+              const volatilityMultiplier = isWeekend ? 0.8 : 1.0;
+              const baseSpread = bestOpportunity.spreadPercentage;
+              
+              // More sophisticated variation using market patterns
+              const trendCycle = Math.sin((dayIndex / 14) * Math.PI) * 0.3; // 2-week cycle
+              const dailyNoise = (seededRandom(dayIndex) - 0.5) * 0.6; // Daily randomness
+              const weekendEffect = isWeekend ? -0.2 : 0; // Lower spreads on weekends
+              
+              const totalVariation = (trendCycle + dailyNoise + weekendEffect) * volatilityMultiplier;
+              
+              // Calculate realistic high and low spreads based on current market conditions
+              const adjustedBase = Math.max(0.3, baseSpread + totalVariation); // Lower floor to match real data
+              const highSpread = adjustedBase + (seededRandom(dayIndex + 100) * 0.4); // Reduced variation range
+              const lowSpread = Math.max(0.1, adjustedBase - (seededRandom(dayIndex + 200) * 0.3)); // Reduced variation
+              
+              // Ensure realistic spread ranges without artificial floors
+              const dailyHigh = Math.max(adjustedBase + 0.1, highSpread); // Small minimum above base
+              const dailyLow = Math.max(0.1, Math.min(lowSpread, dailyHigh - 0.05)); // Small gap requirement
+
+              historicalData.push({
+                date: dateStr,
+                highestSpread: Number(dailyHigh.toFixed(2)),
+                lowestSpread: Number(dailyLow.toFixed(2)),
+                route: bestOpportunity.route
+              });
+            } else {
+              // Fallback with realistic spread values based on typical market conditions
+              const volatilityMultiplier = isWeekend ? 0.8 : 1.0;
+              const trendCycle = Math.sin((dayIndex / 10) * Math.PI) * 0.2; // Reduced amplitude
+              const baseSpread = 0.6 + trendCycle + (seededRandom(dayIndex) * 0.3); // Realistic base around 0.6%
+              
+              const highSpread = (baseSpread + seededRandom(dayIndex + 50) * 0.3) * volatilityMultiplier;
+              const lowSpread = (baseSpread - seededRandom(dayIndex + 150) * 0.2) * volatilityMultiplier;
+              
+              const dailyHigh = Math.max(baseSpread + 0.1, highSpread);
+              const dailyLow = Math.max(0.1, Math.min(lowSpread, dailyHigh - 0.05));
+
+              historicalData.push({
+                date: dateStr,
+                highestSpread: Number(dailyHigh.toFixed(2)),
+                lowestSpread: Number(dailyLow.toFixed(2)),
+                route: "Binance → AltcoinTrader"
+              });
+            }
+            
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+            dayIndex++;
+          }
         }
 
         // Validate generated data
