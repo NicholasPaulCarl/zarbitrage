@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/dark-ui';
+import { useTheme } from '@/components/dark-ui';
 import { ArbitrageOpportunity } from '@/lib/types';
 import { formatZAR, formatPercentage } from '@/lib/formatters';
 import { Brain } from 'lucide-react';
@@ -10,6 +11,7 @@ interface AIAdvisorProps {
 }
 
 export default function AIAdvisor({ opportunities, isLoading }: AIAdvisorProps) {
+  const { theme } = useTheme();
   // Analyze arbitrage opportunities to provide advice
   const advice = useMemo(() => {
     if (isLoading || !opportunities || opportunities.length === 0) {
@@ -65,71 +67,91 @@ export default function AIAdvisor({ opportunities, isLoading }: AIAdvisorProps) 
     };
   }, [opportunities, isLoading]);
 
-  // Background color based on market trend
-  const getBgColorClass = () => {
+  // Background and border colors based on market trend
+  const getBackgroundStyles = () => {
     switch(advice.marketTrend) {
-      case "very_positive": return "bg-green-50 border-green-200";
-      case "positive": return "bg-emerald-50 border-emerald-200";
-      case "neutral": return "bg-blue-50 border-blue-200";
-      case "negative": return "bg-orange-50 border-orange-200";
-      default: return "bg-blue-50 border-blue-200";
+      case "very_positive": 
+        return {
+          backgroundColor: `${theme.colors.status.success}15`,
+          borderColor: `${theme.colors.status.success}30`
+        };
+      case "positive": 
+        return {
+          backgroundColor: `${theme.colors.status.success}10`,
+          borderColor: `${theme.colors.status.success}25`
+        };
+      case "neutral": 
+        return {
+          backgroundColor: `${theme.colors.status.info}10`,
+          borderColor: `${theme.colors.status.info}25`
+        };
+      case "negative": 
+        return {
+          backgroundColor: `${theme.colors.status.warning}10`,
+          borderColor: `${theme.colors.status.warning}25`
+        };
+      default: 
+        return {
+          backgroundColor: `${theme.colors.status.info}10`,
+          borderColor: `${theme.colors.status.info}25`
+        };
     }
   };
 
   // Text color based on market trend
-  const getTextColorClass = () => {
+  const getTextColor = () => {
     switch(advice.marketTrend) {
-      case "very_positive": return "text-green-800";
-      case "positive": return "text-emerald-800";
-      case "neutral": return "text-blue-800";
-      case "negative": return "text-orange-800";
-      default: return "text-blue-800";
+      case "very_positive": return theme.colors.status.success;
+      case "positive": return theme.colors.status.success;
+      case "neutral": return theme.colors.status.info;
+      case "negative": return theme.colors.status.warning;
+      default: return theme.colors.status.info;
     }
   };
 
   return (
-    <Card className={`mb-6 border ${getBgColorClass()}`}>
+    <Card className="mb-6" style={getBackgroundStyles()}>
       <CardHeader className="pb-2">
-        <CardTitle className={`text-lg font-semibold flex items-center gap-2 ${getTextColorClass()}`}>
+        <CardTitle className="text-lg font-semibold flex items-center gap-2" style={{ color: getTextColor() }}>
           <Brain className="h-5 w-5" />
           AI Trading Advisor
         </CardTitle>
-        <CardDescription className="text-gray-600">
+        <CardDescription style={{ color: theme.colors.text.secondary }}>
           Real-time analysis and trading recommendations
         </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-4 rounded w-3/4" style={{ backgroundColor: theme.colors.background.elevated }}></div>
+            <div className="h-4 rounded w-1/2" style={{ backgroundColor: theme.colors.background.elevated }}></div>
+            <div className="h-4 rounded w-5/6" style={{ backgroundColor: theme.colors.background.elevated }}></div>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <div className="font-semibold">Recommendation:</div>
-              <div className={`font-bold text-lg ${getTextColorClass()}`}>{advice.tradingRecommendation}</div>
+              <div className="font-semibold" style={{ color: theme.colors.text.primary }}>Recommendation:</div>
+              <div className="font-bold text-lg" style={{ color: getTextColor() }}>{advice.tradingRecommendation}</div>
             </div>
             
-            <div className="text-sm text-gray-700">
+            <div className="text-sm" style={{ color: theme.colors.text.secondary }}>
               {advice.reasoningSummary}
             </div>
             
             {advice.bestOpportunity && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="text-sm font-medium mb-1">Today's Best Opportunity:</div>
+              <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${theme.colors.border.primary}` }}>
+                <div className="text-sm font-medium mb-1" style={{ color: theme.colors.text.primary }}>Today's Best Opportunity:</div>
                 <div className="flex justify-between text-sm">
-                  <span>Route:</span>
-                  <span className="font-medium">{`${advice.bestOpportunity.buyExchange} → ${advice.bestOpportunity.sellExchange}`}</span>
+                  <span style={{ color: theme.colors.text.secondary }}>Route:</span>
+                  <span className="font-medium" style={{ color: theme.colors.text.primary }}>{`${advice.bestOpportunity.buyExchange} → ${advice.bestOpportunity.sellExchange}`}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Spread:</span>
-                  <span className="font-medium">{formatZAR(advice.bestOpportunity.spread)}</span>
+                  <span style={{ color: theme.colors.text.secondary }}>Spread:</span>
+                  <span className="font-medium" style={{ color: theme.colors.text.primary }}>{formatZAR(advice.bestOpportunity.spread)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Percentage:</span>
-                  <span className="font-medium">{formatPercentage(advice.bestOpportunity.spreadPercentage)}</span>
+                  <span style={{ color: theme.colors.text.secondary }}>Percentage:</span>
+                  <span className="font-medium" style={{ color: theme.colors.text.primary }}>{formatPercentage(advice.bestOpportunity.spreadPercentage)}</span>
                 </div>
               </div>
             )}

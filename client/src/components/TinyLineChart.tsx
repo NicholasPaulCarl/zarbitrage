@@ -4,8 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatPercentage } from "@/lib/formatters";
 import { HistoricalSpread } from "@shared/schema";
 import { format, parseISO, subDays } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { Skeleton, Button, useTheme } from "@/components/dark-ui";
+import { useIsMobile } from '../hooks/use-mobile';
 
 // Visx imports
 import { curveMonotoneX } from '@visx/curve';
@@ -28,8 +28,7 @@ const getLowValue = (d: HistoricalSpread) => {
 
 // Constants - Minimal margins for full-width effect
 const MARGIN = { top: 10, right: 0, bottom: 30, left: 30 };
-const PRIMARY_COLOR = "#FF007F";
-const SECONDARY_COLOR = "rgba(0, 128, 255, 0.8)";
+// Colors will be derived from theme context
 const TOOLTIP_STYLES = {
   ...defaultTooltipStyles,
   minWidth: 160,
@@ -44,16 +43,27 @@ const TOOLTIP_STYLES = {
 };
 
 // Performance-optimized Chart component
-const Chart = ({ data, width, height, isHourlyData = false }: { data: HistoricalSpread[], width: number, height: number, isHourlyData?: boolean }) => {
+const Chart = ({ data, width, height, isHourlyData = false, isMobile = false }: { data: HistoricalSpread[], width: number, height: number, isHourlyData?: boolean, isMobile?: boolean }) => {
+  const { theme } = useTheme();
+  
+  // Theme-based colors
+  const PRIMARY_COLOR = theme.colors.primary.main;
+  const SECONDARY_COLOR = theme.colors.primary.main + '66'; // 40% opacity
   const [tooltip, setTooltip] = useState<{
     data: HistoricalSpread;
     x: number;
     y: number;
   } | null>(null);
 
-  // Chart bounds calculation
-  const innerWidth = width - MARGIN.left - MARGIN.right;
-  const innerHeight = height - MARGIN.top - MARGIN.bottom;
+  // Chart bounds calculation - responsive margins
+  const margin = { 
+    top: 10, 
+    right: 0, 
+    bottom: 30, 
+    left: isMobile ? 0 : 30 
+  };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
 
   // Process data - handle hourly vs daily data differently
   const sortedData = useMemo(() => {
@@ -261,8 +271,8 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
     
     setTooltip({
       data: closestPoint.data,
-      x: closestPoint.x + MARGIN.left,
-      y: closestPoint.y + MARGIN.top - 10
+      x: closestPoint.x + margin.left,
+      y: closestPoint.y + margin.top - 10
     });
   };
 
@@ -275,32 +285,34 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
   return (
     <>
       <svg width={width} height={height}>
-        <Group left={MARGIN.left} top={MARGIN.top}>
+        <Group left={margin.left} top={margin.top}>
           {/* Minimal grid - only horizontal lines */}
           <GridRows
             scale={yScale}
             width={innerWidth}
             height={innerHeight}
-            stroke="#f0f0f0"
+            stroke={theme.colors.border.primary}
             strokeOpacity={0.5}
             numTicks={3}
           />
           
-          {/* Minimal Y-axis */}
-          <AxisLeft
-            scale={yScale}
-            hideAxisLine
-            hideTicks
-            numTicks={3}
-            tickLabelProps={() => ({
-              fill: '#999',
-              fontSize: 9,
-              textAnchor: 'end',
-              dy: '0.3em',
-              dx: -8
-            })}
-            tickFormat={(d) => `${d}%`}
-          />
+          {/* Minimal Y-axis - hidden on mobile */}
+          {!isMobile && (
+            <AxisLeft
+              scale={yScale}
+              hideAxisLine
+              hideTicks
+              numTicks={3}
+              tickLabelProps={() => ({
+                fill: theme.colors.text.tertiary,
+                fontSize: 9,
+                textAnchor: 'end',
+                dy: '0.3em',
+                dx: -8
+              })}
+              tickFormat={(d) => `${d}%`}
+            />
+          )}
           
           {/* Minimal X-axis - reduced ticks */}
           <AxisBottom
@@ -309,7 +321,7 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
             hideAxisLine
             hideTicks
             tickLabelProps={() => ({
-              fill: '#999',
+              fill: theme.colors.text.tertiary,
               fontSize: 9,
               textAnchor: 'middle',
               dy: '1em'
@@ -323,26 +335,26 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
             numTicks={Math.min(5, filteredData.length)}
           />
           
-          {/* High line - with conditional styling for missing data */}
+          {/* High line - clean single line */}
           <LinePath
             data={lineDataHigh}
             x={d => d.x}
             y={d => d.y}
-            stroke={isHourlyData ? "#ccc" : PRIMARY_COLOR} // Grey for hourly (will be overridden by segments)
+            stroke={PRIMARY_COLOR}
             strokeWidth={2.5}
             curve={curveMonotoneX}
-            opacity={isHourlyData ? 0.3 : 1}
+            opacity={1}
           />
           
-          {/* Low line - with conditional styling for missing data */}
+          {/* Low line - shows bottom of spread */}
           <LinePath
             data={lineDataLow}
             x={d => d.x}
             y={d => d.y}
-            stroke={isHourlyData ? "#ccc" : SECONDARY_COLOR} // Grey for hourly (will be overridden by segments)
+            stroke={SECONDARY_COLOR}
             strokeWidth={1.5}
             curve={curveMonotoneX}
-            opacity={isHourlyData ? 0.2 : 0.7}
+            opacity={0.7}
           />
           
           {/* Real data segments - only for hourly data with actual values */}
@@ -353,7 +365,7 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
             
             // Draw colored segments for real data (non-zero spreads), grey for missing data (zero spreads)
             const hasRealData = d.data.highestSpread > 0 && prevPoint.data.highestSpread > 0;
-            const strokeColor = hasRealData ? PRIMARY_COLOR : "#ccc";
+            const strokeColor = hasRealData ? PRIMARY_COLOR : theme.colors.text.disabled;
             const strokeOpacity = hasRealData ? 1 : 0.3;
             
             return (
@@ -377,7 +389,7 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
             
             // Draw colored segments for real data (non-zero spreads), grey for missing data (zero spreads)
             const hasRealData = d.data.lowestSpread > 0 && prevPoint.data.lowestSpread > 0;
-            const strokeColor = hasRealData ? SECONDARY_COLOR : "#ccc";
+            const strokeColor = hasRealData ? SECONDARY_COLOR : theme.colors.text.disabled;
             const strokeOpacity = hasRealData ? 0.7 : 0.2;
             
             return (
@@ -403,7 +415,7 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
                 cx={xScale(getDate(d))}
                 cy={yScale(getHighValue(d))}
                 r={isMissingData ? 1 : 2}
-                fill={isMissingData ? "#ccc" : PRIMARY_COLOR}
+                fill={isMissingData ? theme.colors.text.disabled : PRIMARY_COLOR}
                 opacity={isMissingData ? 0.3 : (isHourlyData ? 0.8 : 0.6)}
               />
             );
@@ -417,7 +429,7 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
                 cx={xScale(getDate(d))}
                 cy={yScale(getLowValue(d))}
                 r={isMissingData ? 1 : 1.5}
-                fill={isMissingData ? "#ccc" : SECONDARY_COLOR}
+                fill={isMissingData ? theme.colors.text.disabled : SECONDARY_COLOR}
                 opacity={isMissingData ? 0.2 : (isHourlyData ? 0.6 : 0.4)}
               />
             );
@@ -476,7 +488,9 @@ const Chart = ({ data, width, height, isHourlyData = false }: { data: Historical
 };
 
 // Skeleton for loading state - minimal version
-const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
+const ChartSkeleton = ({ height = 250 }: { height?: number }) => {
+  const { theme } = useTheme();
+  return (
   <div className="w-full" style={{ height }}>
     <div className="relative h-full">
       <div className="absolute inset-0 bg-gray-50/30"></div>
@@ -497,14 +511,14 @@ const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
           <path 
             d="M0,40 C10,30 20,35 30,25 C40,15 50,20 60,15 C70,10 80,5 90,10 L100,15" 
             fill="none" 
-            stroke="#FF007F" 
+            stroke="#6D00D1" 
             strokeWidth="2"
             opacity="0.3"
           />
           <path 
             d="M0,45 C10,40 20,42 30,35 C40,30 50,32 60,28 C70,25 80,20 90,22 L100,25" 
             fill="none" 
-            stroke="rgba(0, 128, 255, 0.8)" 
+            stroke={theme.colors.primary.light} 
             strokeWidth="1.5"
             opacity="0.2"
           />
@@ -519,11 +533,14 @@ const ChartSkeleton = ({ height = 250 }: { height?: number }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Main Chart Component
 export default function TinyLineChart({ period = '7d' }: { period?: string }) {
+  const { theme } = useTheme();
   const auth = useAuth();
+  const isMobile = useIsMobile();
   
   // Period state - Daily (7d), Weekly (30d), or Monthly (90d)
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d'>(() => {
@@ -590,11 +607,19 @@ export default function TinyLineChart({ period = '7d' }: { period?: string }) {
   return (
     <div className="w-full mb-6">
       {/* Minimal header with title and period toggle */}
-      <div className="flex items-center justify-between mb-4 px-2">
-        <h3 className="text-lg font-semibold text-gray-900">Spread Trends</h3>
-        <div className="flex rounded-lg bg-gray-100 p-1">
+      <div className={`flex items-center justify-between mb-4 ${isMobile ? '' : 'px-2'}`}>
+        <h3 
+          className="text-lg font-semibold"
+          style={{ color: theme.colors.text.primary }}
+        >
+          Spread Trends
+        </h3>
+        <div 
+          className="flex rounded-lg p-1 gap-1"
+          style={{ backgroundColor: theme.colors.background.tertiary }}
+        >
           <Button
-            variant={selectedPeriod === '7d' ? 'default' : 'ghost'}
+            variant={selectedPeriod === '7d' ? 'primary' : 'secondary'}
             size="sm"
             className="h-7 px-3 text-xs"
             onClick={() => handlePeriodChange('7d')}
@@ -602,7 +627,7 @@ export default function TinyLineChart({ period = '7d' }: { period?: string }) {
             Daily
           </Button>
           <Button
-            variant={selectedPeriod === '30d' ? 'default' : 'ghost'}
+            variant={selectedPeriod === '30d' ? 'primary' : 'secondary'}
             size="sm"
             className="h-7 px-3 text-xs"
             onClick={() => handlePeriodChange('30d')}
@@ -610,7 +635,7 @@ export default function TinyLineChart({ period = '7d' }: { period?: string }) {
             Weekly
           </Button>
           <Button
-            variant={selectedPeriod === '90d' ? 'default' : 'ghost'}
+            variant={selectedPeriod === '90d' ? 'primary' : 'secondary'}
             size="sm"
             className="h-7 px-3 text-xs"
             onClick={() => handlePeriodChange('90d')}
@@ -642,6 +667,7 @@ export default function TinyLineChart({ period = '7d' }: { period?: string }) {
                     width={width} 
                     height={height} 
                     isHourlyData={selectedPeriod === '7d'}
+                    isMobile={isMobile}
                   />
                 )}
               </ParentSize>

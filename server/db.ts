@@ -363,6 +363,37 @@ export class PgStorage implements IStorage {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
+
+      // Create hourly spreads table for more granular tracking
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS hourly_spreads (
+          id SERIAL PRIMARY KEY,
+          hour_timestamp TIMESTAMP NOT NULL,
+          buy_exchange TEXT NOT NULL,
+          sell_exchange TEXT NOT NULL,
+          route TEXT NOT NULL,
+          highest_spread REAL NOT NULL,
+          lowest_spread REAL NOT NULL,
+          average_spread REAL,
+          data_points INTEGER DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Create indexes for hourly spreads table
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_hourly_spreads_hour_timestamp ON hourly_spreads(hour_timestamp DESC);
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_hourly_spreads_route ON hourly_spreads(route);
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_hourly_spreads_hour_route ON hourly_spreads(hour_timestamp DESC, route);
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_hourly_spreads_unique_hour_route ON hourly_spreads(hour_timestamp, route);
+      `);
       
       // Create subscription settings table
       await pool.query(`
@@ -1175,6 +1206,113 @@ export class PgStorage implements IStorage {
       }
     } catch (error) {
       console.error("Error recording spread data:", error);
+      throw error;
+    }
+  }
+
+  async recordHourlySpreadData(buyExchange: string, sellExchange: string, spreadPercentage: number): Promise<void> {
+    try {
+      const now = new Date();
+      // Round down to the current hour (e.g., 14:35:22 becomes 14:00:00)
+      const hourTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+      const route = `${buyExchange} → ${sellExchange}`;
+      
+      // Check if we already have a record for this hour and route
+      const existingResult = await pool.query(`
+        SELECT * FROM hourly_spreads
+        WHERE hour_timestamp = $1 AND route = $2
+      `, [hourTimestamp.toISOString(), route]);
+      
+      if (existingResult.rows.length > 0) {
+        // Update existing record
+        const existing = existingResult.rows[0];
+        const id = existing.id;
+        const currentHigh = existing.highest_spread;
+        const currentLow = existing.lowest_spread;
+        const currentAvg = existing.average_spread || spreadPercentage;
+        const currentPoints = existing.data_points || 1;
+        
+        // Calculate new values
+        const newHigh = Math.max(currentHigh, spreadPercentage);
+        const newLow = Math.min(currentLow, spreadPercentage);
+        const newPoints = currentPoints + 1;
+        // Calculate new running average
+        const newAvg = ((currentAvg * currentPoints) + spreadPercentage) / newPoints;
+        
+        // Update the record
+        await pool.query(`
+          UPDATE hourly_spreads
+          SET highest_spread = $1, 
+              lowest_spread = $2, 
+              average_spread = $3, 
+              data_points = $4,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $5
+        `, [newHigh, newLow, newAvg, newPoints, id]);
+      } else {
+        // Create new record - the spread is both highest and lowest initially
+        await pool.query(`
+          INSERT INTO hourly_spreads 
+          (hour_timestamp, buy_exchange, sell_exchange, route, highest_spread, lowest_spread, average_spread, data_points)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
+        `, [
+          hourTimestamp.toISOString(),
+          buyExchange,
+          sellExchange,
+          route,
+          spreadPercentage,
+          spreadPercentage,
+          spreadPercentage,
+        ]);
+      }
+    } catch (error) {
+      console.error("Error recording hourly spread data:", error);
+      throw error;
+    }
+  }
+
+  async getHourlySpreadsByDateRange(startDate: Date, endDate: Date): Promise<{ hourTimestamp: string; highestSpread: number; lowestSpread: number; averageSpread?: number; route: string; dataPoints?: number; }[]> {
+    try {
+      const result = await pool.query(`
+        SELECT hour_timestamp, route, highest_spread, lowest_spread, average_spread, data_points
+        FROM hourly_spreads
+        WHERE hour_timestamp >= $1 AND hour_timestamp <= $2
+        ORDER BY hour_timestamp DESC, highest_spread DESC
+      `, [startDate.toISOString(), endDate.toISOString()]);
+      
+      return result.rows.map(row => ({
+        hourTimestamp: row.hour_timestamp,
+        route: row.route,
+        highestSpread: row.highest_spread,
+        lowestSpread: row.lowest_spread,
+        averageSpread: row.average_spread,
+        dataPoints: row.data_points
+      }));
+    } catch (error) {
+      console.error("Error fetching hourly spreads by date range:", error);
+      throw error;
+    }
+  }
+
+  async getHourlySpreads(hours: number = 24): Promise<{ hourTimestamp: string; highestSpread: number; lowestSpread: number; averageSpread?: number; route: string; dataPoints?: number; }[]> {
+    try {
+      const result = await pool.query(`
+        SELECT hour_timestamp, route, highest_spread, lowest_spread, average_spread, data_points
+        FROM hourly_spreads
+        WHERE hour_timestamp >= NOW() - INTERVAL '${hours} hours'
+        ORDER BY hour_timestamp DESC, highest_spread DESC
+      `);
+      
+      return result.rows.map(row => ({
+        hourTimestamp: row.hour_timestamp,
+        route: row.route,
+        highestSpread: row.highest_spread,
+        lowestSpread: row.lowest_spread,
+        averageSpread: row.average_spread,
+        dataPoints: row.data_points
+      }));
+    } catch (error) {
+      console.error("Error fetching hourly spreads:", error);
       throw error;
     }
   }

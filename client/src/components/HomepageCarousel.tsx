@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/dark-ui";
+import { Button } from "@/components/dark-ui";
+import { useTheme } from "@/components/dark-ui";
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -19,6 +20,7 @@ interface CarouselFromDB {
 }
 
 export default function HomepageCarousel() {
+  const { theme } = useTheme();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const { data: carousels = [], isLoading } = useQuery<CarouselFromDB[]>({
@@ -61,7 +63,10 @@ export default function HomepageCarousel() {
   if (isLoading) {
     return (
       <Card className="w-full h-64 animate-pulse">
-        <CardContent className="p-0 h-full bg-muted rounded-lg" />
+        <CardContent 
+          className="p-0 h-full rounded-lg" 
+          style={{ backgroundColor: theme.colors.background.elevated }}
+        />
       </Card>
     );
   }

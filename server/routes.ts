@@ -1568,11 +1568,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Handle both hourly and daily data formats
           const dateValue = shouldUseHourlyData ? spread.hourTimestamp : spread.date;
           
-          // Validate spread data from database
+          // Validate spread data from database - but skip validation for gap-filled data
           let lowestSpread = spread.lowestSpread;
-          if (typeof lowestSpread !== 'number' || lowestSpread >= spread.highestSpread) {
+          
+          // Debug logging for gap-filled data issue
+          if (spread.highestSpread === 0) {
+            console.log(`Processing gap-filled data: highestSpread=${spread.highestSpread}, lowestSpread=${spread.lowestSpread}`);
+          }
+          
+          if (typeof lowestSpread !== 'number' || (lowestSpread >= spread.highestSpread && spread.highestSpread > 0)) {
+            console.warn(`Correcting invalid spread data: high=${spread.highestSpread}, low=${spread.lowestSpread} -> ${Math.max(0.5, spread.highestSpread - 0.2)}`);
             lowestSpread = Math.max(0.5, spread.highestSpread - 0.2);
-            console.warn(`Corrected invalid database spread data for ${spread.date}: using ${lowestSpread} as low spread`);
           }
           
           return {
@@ -1847,10 +1853,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Validate generated data
+        // Validate generated data - but skip validation for gap-filled data
         const validatedData = historicalData.map(item => {
-          // Ensure lowestSpread is always less than highestSpread
-          if (item.lowestSpread >= item.highestSpread) {
+          // Ensure lowestSpread is always less than highestSpread, but skip gap-filled data (both spreads = 0)
+          if (item.lowestSpread >= item.highestSpread && item.highestSpread > 0) {
             const correctedLow = Math.max(0.5, item.highestSpread - 0.2);
             console.warn(`Corrected invalid spread data for ${item.date}: low ${item.lowestSpread} >= high ${item.highestSpread}, corrected to ${correctedLow}`);
             return { ...item, lowestSpread: Number(correctedLow.toFixed(2)) };

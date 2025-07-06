@@ -11,10 +11,8 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip
 } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, useTheme } from "@/components/dark-ui";
 import { Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ChartProps {
   isLoading: boolean;
@@ -23,6 +21,7 @@ interface ChartProps {
 
 // The main Tiny Line Chart component showing spread trends
 const TinyLineChartRenderer = ({ isLoading, data }: ChartProps) => {
+  const { theme } = useTheme();
   // Format data for the chart
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -44,10 +43,10 @@ const TinyLineChartRenderer = ({ isLoading, data }: ChartProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-md shadow-sm">
-          <p className="font-semibold">{data.fullDate}</p>
-          <p>{`Spread: ${formatPercentage(data.value)}`}</p>
-          <p className="text-gray-600 text-sm">{`Route: ${data.route}`}</p>
+        <div className="p-3 rounded-md shadow-sm" style={{ backgroundColor: theme.colors.background.elevated, border: `1px solid ${theme.colors.border.primary}` }}>
+          <p className="font-semibold" style={{ color: theme.colors.text.primary }}>{data.fullDate}</p>
+          <p style={{ color: theme.colors.text.primary }}>{`Spread: ${formatPercentage(data.value)}`}</p>
+          <p className="text-sm" style={{ color: theme.colors.text.secondary }}>{`Route: ${data.route}`}</p>
         </div>
       );
     }
@@ -65,7 +64,7 @@ const TinyLineChartRenderer = ({ isLoading, data }: ChartProps) => {
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#3b82f6"
+            stroke={theme.colors.primary.main}
             strokeWidth={2}
             dot={false}
           />
@@ -77,6 +76,7 @@ const TinyLineChartRenderer = ({ isLoading, data }: ChartProps) => {
 
 export default function TinyLineChart() {
   const { isAuthenticated } = useAuth();
+  const { theme } = useTheme();
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   
   // Fetch data for all users since endpoint is now accessible to everyone
@@ -123,22 +123,13 @@ export default function TinyLineChart() {
   const hasData = !isLoading && data && data.length > 0;
   
   return (
-    <Card className="bg-white shadow-md mb-6">
+    <Card className="mb-6">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div>
             <CardTitle className="text-lg flex items-center gap-2">
               Weekly Spread Trends
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Shows the highest spread percentage for each day over the last week based on recorded alerts.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Info className="h-4 w-4 cursor-help" style={{ color: theme.colors.text.tertiary }} title="Shows the highest spread percentage for each day over the last week based on recorded alerts." />
             </CardTitle>
             <CardDescription>Highest percentage spread opportunities over time</CardDescription>
           </div>
@@ -147,11 +138,11 @@ export default function TinyLineChart() {
       
       <CardContent className="pt-2">
         {error ? (
-          <div className="w-full h-[120px] flex items-center justify-center text-gray-500">
+          <div className="w-full h-[120px] flex items-center justify-center" style={{ color: theme.colors.text.secondary }}>
             <p>Failed to load historical data. Please try again later.</p>
           </div>
         ) : !hasData && !isLoading ? (
-          <div className="w-full h-[120px] flex items-center justify-center text-gray-500">
+          <div className="w-full h-[120px] flex items-center justify-center" style={{ color: theme.colors.text.secondary }}>
             <p>No historical data available yet. Alerts will appear here as they are triggered.</p>
           </div>
         ) : (

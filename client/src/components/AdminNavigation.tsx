@@ -4,15 +4,14 @@ import {
   Tabs, 
   TabsContent, 
   TabsList, 
-  TabsTrigger
-} from '@/components/ui/tabs';
-import {
+  TabsTrigger,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+  useTheme
+} from '@/components/dark-ui';
 import { ChevronDown } from 'lucide-react';
 
 interface AdminNavigationProps {
@@ -23,6 +22,7 @@ interface AdminNavigationProps {
 export default function AdminNavigation({ activeTab, children }: AdminNavigationProps) {
   const [location, setLocation] = useLocation();
   const [currentTab, setCurrentTab] = useState(activeTab || 'users');
+  const { theme } = useTheme();
   
   // Navigation options for consistent use
   const navigationOptions = [

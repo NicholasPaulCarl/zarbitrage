@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ArbitrageOpportunity } from '@shared/schema';
-import { Skeleton } from './ui/skeleton';
+import { Skeleton, useTheme } from '@/components/dark-ui';
 import { useIsMobile } from '../hooks/use-mobile';
 
 // Import Visx components
@@ -25,8 +25,9 @@ export default function SpreadBarChart({ opportunities, loading }: SpreadBarChar
   const [tooltipLeft, setTooltipLeft] = useState(0);
   const [tooltipTop, setTooltipTop] = useState(0);
 
-  // Primary color (pink/magenta)
-  const primaryColor = "#FF007F";
+  // Primary color from theme
+  const { theme } = useTheme();
+  const primaryColor = theme.colors.primary.main;
 
   // Filter and prepare data for visualization
   const visData = useMemo(() => {
@@ -47,15 +48,15 @@ export default function SpreadBarChart({ opportunities, loading }: SpreadBarChar
   if (loading) {
     return (
       <div className="w-full h-full">
-        <Skeleton className="h-full w-full" />
+        <Skeleton height="100%" width="100%" />
       </div>
     );
   }
 
   if (visData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-gray-500 text-sm">No arbitrage opportunities available</p>
+      <div className="flex items-center justify-center h-full rounded-lg border" style={{ backgroundColor: theme.colors.background.tertiary, borderColor: theme.colors.border.primary }}>
+        <p className="text-sm" style={{ color: theme.colors.text.secondary }}>No arbitrage opportunities available</p>
       </div>
     );
   }
@@ -65,9 +66,9 @@ export default function SpreadBarChart({ opportunities, loading }: SpreadBarChar
     ...defaultTooltipStyles,
     minWidth: 160,
     maxWidth: 240,
-    backgroundColor: 'white',
-    color: '#333',
-    border: '1px solid #ddd',
+    backgroundColor: theme.colors.background.elevated,
+    color: theme.colors.text.primary,
+    border: `1px solid ${theme.colors.border.primary}`,
     borderRadius: '4px',
     padding: '8px 12px',
     fontSize: '12px',
@@ -126,7 +127,7 @@ export default function SpreadBarChart({ opportunities, loading }: SpreadBarChar
                     scale={yScale}
                     width={innerWidth}
                     height={innerHeight}
-                    stroke="#e0e0e0"
+                    stroke={theme.colors.border.primary}
                     strokeOpacity={0.3}
                     strokeDasharray="3,3"
                     numTicks={4}
@@ -136,10 +137,10 @@ export default function SpreadBarChart({ opportunities, loading }: SpreadBarChar
                   <AxisLeft
                     scale={yScale}
                     hideAxisLine
-                    tickStroke="#e0e0e0"
+                    tickStroke={theme.colors.border.primary}
                     numTicks={4}
                     tickLabelProps={() => ({
-                      fill: '#888',
+                      fill: theme.colors.text.tertiary,
                       fontSize: 10,
                       textAnchor: 'end',
                       dy: '0.3em',
@@ -184,7 +185,7 @@ export default function SpreadBarChart({ opportunities, loading }: SpreadBarChar
                         y={innerHeight + 20}
                         fontSize={10}
                         textAnchor="middle"
-                        fill="#666"
+                        fill={theme.colors.text.secondary}
                         transform={`rotate(-20, ${x}, ${innerHeight + 20})`}
                       >
                         {opportunity.route}

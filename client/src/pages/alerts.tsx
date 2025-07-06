@@ -5,14 +5,12 @@ import AlertSettings from '@/components/AlertSettings';
 import AlertHistory from '@/components/AlertHistory';
 import Layout from '@/components/Layout';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger, Spinner, useTheme } from '@/components/dark-ui';
 import { useLocation } from 'wouter';
 import { Bell, InfoIcon, Lock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AlertsPage() {
+  const { theme } = useTheme();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [_, setLocation] = useLocation();
   const {
@@ -52,8 +50,8 @@ export default function AlertsPage() {
   if (authLoading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="flex justify-center items-center" style={{ minHeight: '60vh' }}>
+          <Spinner size="lg" />
         </div>
       </Layout>
     );
@@ -68,21 +66,35 @@ export default function AlertsPage() {
     <>
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Alerts</h1>
-          <p className="text-muted-foreground">
+          <h1 
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: theme.colors.text.primary }}
+          >
+            Alerts
+          </h1>
+          <p style={{ color: theme.colors.text.secondary }}>
             Manage your arbitrage opportunity notifications
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex items-center">
-          <InfoIcon className="h-4 w-4 text-muted-foreground mr-2" />
-          <span className="text-sm text-muted-foreground">
+          <InfoIcon 
+            className="h-4 w-4 mr-2" 
+            style={{ color: theme.colors.text.secondary }}
+          />
+          <span 
+            className="text-sm"
+            style={{ color: theme.colors.text.secondary }}
+          >
             Get notified when arbitrage opportunities exceed your threshold
           </span>
         </div>
       </div>
       
       <Tabs defaultValue="history" className="w-full">
-        <TabsList className="mb-6 grid grid-cols-2 w-full max-w-[400px]">
+        <TabsList 
+          className="mb-6 grid grid-cols-2 w-full" 
+          style={{ maxWidth: '400px' }}
+        >
           <TabsTrigger value="history" className="flex items-center">
             <Bell className="h-4 w-4 mr-2" />
             History
@@ -93,11 +105,14 @@ export default function AlertsPage() {
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="history" className="mt-0">
+        <TabsContent value="history" style={{ marginTop: 0 }}>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader style={{ paddingBottom: '0.75rem' }}>
               <div className="flex items-center space-x-2">
-                <Bell className="h-5 w-5 text-primary" />
+                <Bell 
+                  className="h-5 w-5" 
+                  style={{ color: theme.colors.primary.main }}
+                />
                 <CardTitle>Alert History</CardTitle>
               </div>
               <CardDescription>
@@ -114,11 +129,14 @@ export default function AlertsPage() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="settings" className="mt-0">
+        <TabsContent value="settings" style={{ marginTop: 0 }}>
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader style={{ paddingBottom: '0.75rem' }}>
               <div className="flex items-center space-x-2">
-                <InfoIcon className="h-5 w-5 text-primary" />
+                <InfoIcon 
+                  className="h-5 w-5" 
+                  style={{ color: theme.colors.primary.main }}
+                />
                 <CardTitle>Alert Settings</CardTitle>
               </div>
               <CardDescription>

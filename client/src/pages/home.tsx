@@ -5,18 +5,20 @@ import ArbitrageOpportunities from '@/components/ArbitrageOpportunities';
 import AlertNotification from '@/components/AlertNotification';
 import TinyLineChart from '@/components/TinyLineChart';
 import SpreadBarChart from '@/components/SpreadBarChart';
-import AIAdvisor from '@/components/AIAdvisor';
+// import AIAdvisor from '@/components/AIAdvisor';
 import HomepageCarousel from '@/components/HomepageCarousel';
 import Layout from '@/components/Layout';
 import useArbitrageTracker from '@/hooks/useArbitrageTracker';
 import useAlerts from '@/hooks/useAlerts';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
+import { Button, Card, Badge, useTheme } from '@/components/dark-ui';
 import { useLocation } from 'wouter';
 import { Bell, BarChart, Crown, CheckCircle } from 'lucide-react';
 
 export default function Home() {
+  const { theme } = useTheme();
+  
   // Get refresh rate from localStorage or default to 30 seconds
   const [initialRefreshRate] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -113,91 +115,102 @@ export default function Home() {
       {/* Top Arbitrage Opportunities Section - Only visible for authenticated users */}
       {isAuthenticated && (
         <div className="mb-6">
-          <h2 className="text-2xl font-bold flex items-center mb-2">
-            <BarChart className="h-5 w-5 mr-2 text-primary" />
+          <h2 
+            className="text-2xl font-bold flex items-center mb-2"
+            style={{ color: theme.colors.text.primary }}
+          >
+            <BarChart 
+              className="h-5 w-5 mr-2" 
+              style={{ color: theme.colors.primary.main }}
+            />
             Arbitrage Opportunities
           </h2>
           
-          {/* Top 5 Arbitrage Opportunities in its own row */}
-          <div className="bg-white p-4 rounded flex flex-col h-full mb-4">
-            <div className="flex-grow overflow-auto">
-              <ArbitrageOpportunities 
-                opportunities={data.opportunities || []}
-                threshold={threshold}
-                loading={data.loading}
-              />
-            </div>
-          </div>
+          {/* Arbitrage Opportunities - Minimal design */}
+          <ArbitrageOpportunities 
+            opportunities={data.opportunities || []}
+            threshold={threshold}
+            loading={data.loading}
+          />
           
-          {/* AI Advisor - Added below Arbitrage Opportunities */}
-          <AIAdvisor 
+          {/* AI Advisor - Hidden for minimal UI */}
+          {/* <AIAdvisor 
             opportunities={data.opportunities || []}
             isLoading={data.loading}
-          />
+          /> */}
         </div>
       )}
       
-      {/* Spread Trends (renamed from Monthly Spread Trends) */}
+      {/* Spread Trends - Minimal design, no container */}
       {isAuthenticated && (
-        <div className="mb-6">
-          <TinyLineChart />
-        </div>
+        <TinyLineChart />
       )}
       
       {!isAuthenticated && (
-        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 md:p-6">
+        <Card 
+          className="mb-6"
+          style={{
+            background: `linear-gradient(to right, ${theme.colors.primary.main}20, ${theme.colors.primary.main}30)`,
+            borderColor: theme.colors.primary.main
+          }}
+        >
           <div className="flex items-center mb-3">
-            <Crown className="h-6 w-6 text-amber-500 mr-2" />
-            <h3 className="text-lg md:text-xl font-bold text-blue-800">Unlock Premium Features</h3>
+            <Crown className="h-6 w-6 mr-2" style={{ color: '#F59E0B' }} />
+            <h3 
+              className="text-lg md:text-xl font-bold"
+              style={{ color: theme.colors.text.primary }}
+            >
+              Unlock Premium Features
+            </h3>
           </div>
-          <p className="text-sm md:text-base text-blue-700 mb-4">
+          <p 
+            className="text-sm md:text-base mb-4"
+            style={{ color: theme.colors.text.secondary }}
+          >
             Join thousands of traders maximizing their arbitrage profits with our comprehensive suite of premium tools
           </p>
           
           {/* Premium Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Real-time arbitrage opportunities</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Advanced profit calculator</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Browser push notifications</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Webhook alert integrations</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Trade journal & analytics</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Historical spread data</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Multi-exchange monitoring</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-blue-700">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Customizable alert thresholds</span>
-            </div>
+            {[
+              'Real-time arbitrage opportunities',
+              'Advanced profit calculator', 
+              'Browser push notifications',
+              'Webhook alert integrations',
+              'Trade journal & analytics',
+              'Historical spread data',
+              'Multi-exchange monitoring',
+              'Customizable alert thresholds'
+            ].map((feature) => (
+              <div 
+                key={feature}
+                className="flex items-center space-x-2 text-sm"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                <CheckCircle className="h-4 w-4" style={{ color: '#10B981' }} />
+                <span>{feature}</span>
+              </div>
+            ))}
           </div>
           
-          <div className="bg-white/50 rounded-lg p-4 border border-blue-300/50 mb-4">
-            <p className="text-center text-blue-800 font-semibold mb-3">
+          <div 
+            className="rounded-lg p-4 border mb-4"
+            style={{
+              backgroundColor: `${theme.colors.background.elevated}`,
+              borderColor: theme.colors.border.primary
+            }}
+          >
+            <p 
+              className="text-center font-semibold mb-3"
+              style={{ color: theme.colors.text.primary }}
+            >
               Start maximizing your crypto arbitrage profits today!
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button 
                 onClick={() => setLocation('/register')}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 py-2"
+                variant="primary"
+                className="font-medium px-6 py-2"
                 data-testid="get-started-button"
               >
                 Get Started Free
@@ -205,7 +218,7 @@ export default function Home() {
               <Button 
                 onClick={() => setLocation('/login')}
                 variant="outline"
-                className="border-blue-500 text-blue-700 hover:bg-blue-50 font-medium px-6 py-2"
+                className="font-medium px-6 py-2"
                 data-testid="sign-in-button"
               >
                 Sign In
@@ -214,31 +227,42 @@ export default function Home() {
           </div>
           
           <div className="text-center">
-            <p className="text-xs text-blue-600">
+            <p 
+              className="text-xs"
+              style={{ color: theme.colors.text.secondary }}
+            >
               Join 10,000+ traders already using our platform
             </p>
           </div>
-        </div>
+        </Card>
       )}
       
       {/* Exchange Rate Summary and Visual Spread Comparison side by side */}
       {isAuthenticated && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Exchange Rate Summary */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <Card>
             <ExchangeRateSummary 
               exchangeRate={data.exchangeRate || { rate: 19.0, timestamp: new Date().toISOString() }}
               bestOpportunity={data.bestOpportunity}
               potentialProfit={data.potentialProfit}
               loading={data.loading}
             />
-          </div>
+          </Card>
           
           {/* Visual Spread Comparison */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col h-full">
+          <Card className="flex flex-col h-full">
             <div className="mb-2">
-              <h3 className="text-base md:text-lg font-medium">Visual Spread Comparison</h3>
-              <p className="text-sm text-gray-500">
+              <h3 
+                className="text-base md:text-lg font-medium"
+                style={{ color: theme.colors.text.primary }}
+              >
+                Visual Spread Comparison
+              </h3>
+              <p 
+                className="text-sm"
+                style={{ color: theme.colors.text.secondary }}
+              >
                 Real-time arbitrage rates and profit indicators
               </p>
             </div>
@@ -248,20 +272,20 @@ export default function Home() {
                 loading={data.loading}
               />
             </div>
-          </div>
+          </Card>
         </div>
       )}
       
       {/* Exchange Rate Summary for non-authenticated users */}
       {!isAuthenticated && (
-        <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <Card className="mb-6">
           <ExchangeRateSummary 
             exchangeRate={data.exchangeRate || { rate: 19.0, timestamp: new Date().toISOString() }}
             bestOpportunity={data.bestOpportunity}
             potentialProfit={data.potentialProfit}
             loading={data.loading}
           />
-        </div>
+        </Card>
       )}
       
       <PriceComparison 
@@ -279,11 +303,19 @@ export default function Home() {
 
       {/* Alert Management Section */}
       {isAuthenticated && (
-        <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+        <Card className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-gray-800">Alert Management</h2>
+            <h2 
+              className="text-lg font-semibold"
+              style={{ color: theme.colors.text.primary }}
+            >
+              Alert Management
+            </h2>
           </div>
-          <p className="text-gray-600 text-sm mb-4">
+          <p 
+            className="text-sm mb-4"
+            style={{ color: theme.colors.text.secondary }}
+          >
             Alert settings and history have been moved to a dedicated page for better organization.
             Visit the Alerts page to configure your notification preferences and view your alert history.
           </p>
@@ -295,7 +327,7 @@ export default function Home() {
             <Bell className="h-4 w-4 mr-2" />
             <span>Go to Alerts Page</span>
           </Button>
-        </div>
+        </Card>
       )}
       
       {isAuthenticated && (

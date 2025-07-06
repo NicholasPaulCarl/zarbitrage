@@ -3,17 +3,16 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/Layout";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, useTheme } from "@/components/dark-ui";
 import { CalculatorForm } from "../components/CalculatorForm";
 import { CalculatorResult } from "../components/CalculatorResult";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ArbitrageOpportunity, ExchangeFee, CalculatorResult as CalculatorResultType } from "@/lib/types";
 import { Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function CalculatorPage() {
+  const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [calculationResult, setCalculationResult] = useState<CalculatorResultType | null>(null);
@@ -64,15 +63,20 @@ export default function CalculatorPage() {
       <SubscriptionGuard featureName="Profit Calculator">
         <div className="flex flex-col space-y-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Arbitrage Calculator</h1>
-            <p className="text-muted-foreground">
+            <h1 
+              className="text-2xl font-bold tracking-tight"
+              style={{ color: theme.colors.text.primary }}
+            >
+              Arbitrage Calculator
+            </h1>
+            <p style={{ color: theme.colors.text.secondary }}>
               Calculate potential profits with exchange fees and transfers included
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Calculator Form */}
-            <Card className="shadow-md">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Calculate Profit</CardTitle>
                 <CardDescription>
@@ -82,10 +86,10 @@ export default function CalculatorPage() {
               <CardContent>
                 {isLoading ? (
                   <div className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-3/4" />
+                    <Skeleton height="2.5rem" width="100%" />
+                    <Skeleton height="2.5rem" width="100%" />
+                    <Skeleton height="2.5rem" width="100%" />
+                    <Skeleton height="2.5rem" width="75%" />
                   </div>
                 ) : (
                   <CalculatorForm 
@@ -98,7 +102,7 @@ export default function CalculatorPage() {
             </Card>
 
             {/* Calculation Results */}
-            <Card className="shadow-md">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Profit Calculation Results</CardTitle>
                 <CardDescription>
@@ -108,10 +112,10 @@ export default function CalculatorPage() {
               <CardContent>
                 {isLoading ? (
                   <div className="space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-3/4" />
+                    <Skeleton height="2.5rem" width="100%" />
+                    <Skeleton height="2.5rem" width="100%" />
+                    <Skeleton height="2.5rem" width="100%" />
+                    <Skeleton height="2.5rem" width="75%" />
                   </div>
                 ) : (
                   <CalculatorResult result={calculationResult} />

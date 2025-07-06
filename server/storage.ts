@@ -45,6 +45,11 @@ export interface IStorage {
   updateDailySpread(id: number, data: UpdateDailySpread): Promise<DailySpread | undefined>;
   recordSpreadData(buyExchange: string, sellExchange: string, spreadPercentage: number): Promise<void>;
   
+  // Hourly spread tracking methods
+  getHourlySpreads(hours?: number): Promise<{ hourTimestamp: string; highestSpread: number; lowestSpread: number; averageSpread?: number; route: string; dataPoints?: number; }[]>;
+  getHourlySpreadsByDateRange(startDate: Date, endDate: Date): Promise<{ hourTimestamp: string; highestSpread: number; lowestSpread: number; averageSpread?: number; route: string; dataPoints?: number; }[]>;
+  recordHourlySpreadData(buyExchange: string, sellExchange: string, spreadPercentage: number): Promise<void>;
+  
   // Subscription settings methods
   getSubscriptionSettings(): Promise<SubscriptionSettings>;
   updateSubscriptionSettings(settings: UpdateSubscriptionSettings): Promise<SubscriptionSettings>;
@@ -589,6 +594,22 @@ export class MemStorage implements IStorage {
         dataPoints: 1
       });
     }
+  }
+
+  // Hourly spread methods - basic stubs for in-memory storage
+  async getHourlySpreads(hours: number = 24): Promise<{ hourTimestamp: string; highestSpread: number; lowestSpread: number; averageSpread?: number; route: string; dataPoints?: number; }[]> {
+    // For in-memory storage, return empty array
+    return [];
+  }
+
+  async getHourlySpreadsByDateRange(startDate: Date, endDate: Date): Promise<{ hourTimestamp: string; highestSpread: number; lowestSpread: number; averageSpread?: number; route: string; dataPoints?: number; }[]> {
+    // For in-memory storage, return empty array
+    return [];
+  }
+
+  async recordHourlySpreadData(buyExchange: string, sellExchange: string, spreadPercentage: number): Promise<void> {
+    // For in-memory storage, this is a no-op
+    return Promise.resolve();
   }
 }
 

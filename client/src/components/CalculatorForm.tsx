@@ -14,17 +14,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import {
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+  Input,
+  Button,
+  Card,
+  CardContent,
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+  useTheme
+} from "@/components/dark-ui";
 import { 
   Calculator, 
   ArrowRightLeft, 
@@ -32,7 +32,6 @@ import {
   DollarSign, 
   Info
 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CalculatorFormProps {
   opportunities: ArbitrageOpportunity[];
@@ -51,6 +50,7 @@ const calculatorSchema = z.object({
 type CalculatorFormValues = z.infer<typeof calculatorSchema>;
 
 export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: CalculatorFormProps) {
+  const { theme } = useTheme();
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<ArbitrageOpportunity | null>(null);
@@ -151,11 +151,16 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
               </FormLabel>
               <FormControl>
                 <div className="relative">
-                  <span className="absolute left-2.5 top-2.5 text-sm text-gray-500">R</span>
+                  <span 
+                    className="absolute left-2.5 top-2.5 text-sm"
+                    style={{ color: theme.colors.text.secondary }}
+                  >
+                    R
+                  </span>
                   <Input
                     type="number"
                     placeholder="10000"
-                    className="pl-9"
+                    style={{ paddingLeft: '2.25rem' }}
                     {...field}
                   />
                 </div>
@@ -175,31 +180,17 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
           render={({ field }) => (
             <FormItem>
               <FormLabel>Arbitrage Opportunity</FormLabel>
-              <Select
-                onValueChange={handleSelectOpportunity}
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an arbitrage opportunity" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {opportunities.map((opportunity, index) => (
-                    <SelectItem
-                      key={`${opportunity.buyExchange.toLowerCase()}-${opportunity.sellExchange.toLowerCase()}`}
-                      value={`${opportunity.buyExchange.toLowerCase()}-${opportunity.sellExchange.toLowerCase()}`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span>{opportunity.route}</span>
-                        <span className="ml-2 text-green-600 font-medium">
-                          {formatPercentage(opportunity.spreadPercentage)}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <Select
+                  value={field.value || ''}
+                  onChange={handleSelectOpportunity}
+                  placeholder="Select an arbitrage opportunity"
+                  options={opportunities.map((opportunity, index) => ({
+                    value: `${opportunity.buyExchange.toLowerCase()}-${opportunity.sellExchange.toLowerCase()}`,
+                    label: `${opportunity.route} (${formatPercentage(opportunity.spreadPercentage)})`
+                  }))}
+                />
+              </FormControl>
               <FormDescription className="text-xs">
                 Select the arbitrage opportunity to calculate potential profit
               </FormDescription>
@@ -209,18 +200,24 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
         />
 
         {selectedOpportunity && (
-          <Card className="bg-muted/50 border-dashed">
-            <CardContent className="pt-4 pb-2">
+          <Card 
+            variant="muted"
+            style={{
+              borderStyle: 'dashed',
+              borderColor: theme.colors.border.primary
+            }}
+          >
+            <CardContent style={{ paddingTop: '1rem', paddingBottom: '0.5rem' }}>
               <div className="text-sm flex flex-col space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Current Spread:</span>
-                  <span className="font-medium text-green-600">
+                  <span style={{ color: theme.colors.text.secondary }}>Current Spread:</span>
+                  <span style={{ fontWeight: '500', color: theme.colors.status.success }}>
                     {formatZAR(selectedOpportunity.spread)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Spread Percentage:</span>
-                  <span className="font-medium text-green-600">
+                  <span style={{ color: theme.colors.text.secondary }}>Spread Percentage:</span>
+                  <span style={{ fontWeight: '500', color: theme.colors.status.success }}>
                     {formatPercentage(selectedOpportunity.spreadPercentage)}
                   </span>
                 </div>
@@ -239,26 +236,31 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
                 <FormLabel className="flex items-center">
                   Buy Exchange Fee (%)
                   <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3.5 w-3.5 ml-1 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
+                    <Tooltip 
+                      content={
                         <p className="w-60 text-xs">
                           Default: {getBuyExchangeFee()?.tradingFeePercentage || 'N/A'}% for {selectedOpportunity?.buyExchange || 'selected exchange'}
                         </p>
-                      </TooltipContent>
+                      }
+                    >
+                      <Info 
+                        className="h-3.5 w-3.5 ml-1 cursor-help" 
+                        style={{ color: theme.colors.text.secondary }}
+                      />
                     </Tooltip>
                   </TooltipProvider>
                 </FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Percent className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Percent 
+                      className="absolute left-2.5 top-2.5 h-4 w-4" 
+                      style={{ color: theme.colors.text.secondary }}
+                    />
                     <Input
                       type="number"
                       step="0.01"
                       placeholder={getBuyExchangeFee()?.tradingFeePercentage?.toString() || "0.1"}
-                      className="pl-9"
+                      style={{ paddingLeft: '2.25rem' }}
                       {...field}
                       value={field.value === undefined ? '' : field.value}
                       onChange={(e) => {
@@ -288,26 +290,31 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
                 <FormLabel className="flex items-center">
                   Sell Exchange Fee (%)
                   <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3.5 w-3.5 ml-1 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
+                    <Tooltip 
+                      content={
                         <p className="w-60 text-xs">
                           Default: {getSellExchangeFee()?.tradingFeePercentage || 'N/A'}% for {selectedOpportunity?.sellExchange || 'selected exchange'}
                         </p>
-                      </TooltipContent>
+                      }
+                    >
+                      <Info 
+                        className="h-3.5 w-3.5 ml-1 cursor-help" 
+                        style={{ color: theme.colors.text.secondary }}
+                      />
                     </Tooltip>
                   </TooltipProvider>
                 </FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Percent className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Percent 
+                      className="absolute left-2.5 top-2.5 h-4 w-4" 
+                      style={{ color: theme.colors.text.secondary }}
+                    />
                     <Input
                       type="number"
                       step="0.01"
                       placeholder={getSellExchangeFee()?.tradingFeePercentage?.toString() || "0.1"}
-                      className="pl-9"
+                      style={{ paddingLeft: '2.25rem' }}
                       {...field}
                       value={field.value === undefined ? '' : field.value}
                       onChange={(e) => {
@@ -338,25 +345,32 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
               <FormLabel className="flex items-center">
                 Transfer Fee (ZAR)
                 <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3.5 w-3.5 ml-1 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
+                  <Tooltip 
+                    content={
                       <p className="w-60 text-xs">
                         The cost of transferring BTC between exchanges or any other transaction fees
                       </p>
-                    </TooltipContent>
+                    }
+                  >
+                    <Info 
+                      className="h-3.5 w-3.5 ml-1 cursor-help" 
+                      style={{ color: theme.colors.text.secondary }}
+                    />
                   </Tooltip>
                 </TooltipProvider>
               </FormLabel>
               <FormControl>
                 <div className="relative">
-                  <span className="absolute left-2.5 top-2.5 text-sm text-gray-500">R</span>
+                  <span 
+                    className="absolute left-2.5 top-2.5 text-sm"
+                    style={{ color: theme.colors.text.secondary }}
+                  >
+                    R
+                  </span>
                   <Input
                     type="number"
                     placeholder="100"
-                    className="pl-9"
+                    style={{ paddingLeft: '2.25rem' }}
                     {...field}
                   />
                 </div>
@@ -372,7 +386,8 @@ export function CalculatorForm({ opportunities, exchangeFees, onCalculate }: Cal
         <Button 
           type="submit" 
           disabled={isCalculating || !form.getValues("opportunityId")}
-          className="w-full"
+          variant="primary"
+          style={{ width: '100%' }}
         >
           <Calculator className="mr-2 h-4 w-4" />
           {isCalculating ? "Calculating..." : "Calculate Profit"}

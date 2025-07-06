@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
+import { Label, Input, Switch, Button, useTheme } from '@/components/dark-ui';
 import { Save, Check } from 'lucide-react';
 
 interface AlertSettingsProps {
@@ -22,6 +19,7 @@ export default function AlertSettings({
   toggleSoundAlerts,
   toggleBrowserNotifications
 }: AlertSettingsProps) {
+  const { theme } = useTheme();
   const [inputValue, setInputValue] = useState<string>(threshold.toString());
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -111,15 +109,33 @@ export default function AlertSettings({
   return (
     <div className="space-y-6">
       {/* Threshold Setting Section */}
-      <div className="bg-muted/30 border rounded-lg p-4">
+      <div 
+        className="border rounded-lg p-4"
+        style={{ 
+          backgroundColor: `${theme.colors.background.tertiary}30`,
+          borderColor: theme.colors.border.primary
+        }}
+      >
         <div className="mb-3">
-          <h3 className="text-sm font-medium text-foreground flex items-center">
-            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary mr-2">
+          <h3 
+            className="text-sm font-medium flex items-center"
+            style={{ color: theme.colors.text.primary }}
+          >
+            <span 
+              className="inline-flex items-center justify-center h-6 w-6 rounded-full mr-2"
+              style={{ 
+                backgroundColor: `${theme.colors.primary.main}10`,
+                color: theme.colors.primary.main
+              }}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-percent"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
             </span>
             Spread Threshold
           </h3>
-          <p className="text-xs text-muted-foreground ml-8">
+          <p 
+            className="text-xs ml-8"
+            style={{ color: theme.colors.text.secondary }}
+          >
             You will be alerted when opportunities exceed this percentage
           </p>
         </div>
@@ -136,7 +152,13 @@ export default function AlertSettings({
               onKeyDown={handleKeyDown}
               className="pr-6 text-right font-medium"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
+            <span 
+              className="absolute right-3 top-1/2 text-sm pointer-events-none"
+              style={{ 
+                transform: 'translateY(-50%)',
+                color: theme.colors.text.secondary
+              }}
+            >
               %
             </span>
           </div>
@@ -145,8 +167,16 @@ export default function AlertSettings({
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
             size="sm"
-            variant={savedSuccess ? "outline" : "default"}
-            className={`ml-3 h-9 transition-all ${savedSuccess ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:text-green-700" : ""}`}
+            variant={savedSuccess ? "outline" : "primary"}
+            className="ml-3 transition-all"
+            style={{
+              height: '2.25rem',
+              ...(savedSuccess ? {
+                backgroundColor: `${theme.colors.status.success}10`,
+                color: theme.colors.status.success,
+                borderColor: theme.colors.status.success
+              } : {})
+            }}
           >
             {isSaving ? (
               <span className="flex items-center">
@@ -169,58 +199,125 @@ export default function AlertSettings({
       </div>
       
       {/* Notification Types Section */}
-      <div className="bg-muted/30 border rounded-lg p-4">
+      <div 
+        className="border rounded-lg p-4"
+        style={{ 
+          backgroundColor: `${theme.colors.background.tertiary}30`,
+          borderColor: theme.colors.border.primary
+        }}
+      >
         <div className="mb-3">
-          <h3 className="text-sm font-medium text-foreground flex items-center">
-            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary mr-2">
+          <h3 
+            className="text-sm font-medium flex items-center"
+            style={{ color: theme.colors.text.primary }}
+          >
+            <span 
+              className="inline-flex items-center justify-center h-6 w-6 rounded-full mr-2"
+              style={{ 
+                backgroundColor: `${theme.colors.primary.main}10`,
+                color: theme.colors.primary.main
+              }}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             </span>
             Notification Methods
           </h3>
-          <p className="text-xs text-muted-foreground ml-8">
+          <p 
+            className="text-xs ml-8"
+            style={{ color: theme.colors.text.secondary }}
+          >
             Choose how you want to be notified about profitable opportunities
           </p>
         </div>
         
         <div className="space-y-3 ml-8">
-          <div className="flex items-center justify-between bg-background rounded-md p-2.5 pr-3 border">
+          <div 
+            className="flex items-center justify-between rounded-md p-2.5 pr-3 border"
+            style={{
+              backgroundColor: theme.colors.background.primary,
+              borderColor: theme.colors.border.primary
+            }}
+          >
             <div className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground mr-2.5"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="15" 
+                height="15" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="mr-2.5"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+              </svg>
               <div>
                 <Label htmlFor="sound-toggle" className="text-sm font-medium block">
                   Sound Alerts
                 </Label>
-                <p className="text-xs text-muted-foreground">
+                <p 
+                  className="text-xs"
+                  style={{ color: theme.colors.text.secondary }}
+                >
                   Play a sound when an opportunity is found
                 </p>
               </div>
             </div>
             <Switch 
-              id="sound-toggle" 
               checked={soundEnabled} 
-              onCheckedChange={(checked) => {
+              onChange={(checked: boolean) => {
                 handleSoundToggleChange(checked);
                 toggleSoundAlerts(checked);
               }}
             />
           </div>
           
-          <div className="flex items-center justify-between bg-background rounded-md p-2.5 pr-3 border">
+          <div 
+            className="flex items-center justify-between rounded-md p-2.5 pr-3 border"
+            style={{
+              backgroundColor: theme.colors.background.primary,
+              borderColor: theme.colors.border.primary
+            }}
+          >
             <div className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground mr-2.5"><path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="m22 3-5 5"></path><path d="m17 3 5 5"></path></svg>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="15" 
+                height="15" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="mr-2.5"
+                style={{ color: theme.colors.text.secondary }}
+              >
+                <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
+                <path d="M8 21h8"></path>
+                <path d="M12 17v4"></path>
+                <path d="m22 3-5 5"></path>
+                <path d="m17 3 5 5"></path>
+              </svg>
               <div>
                 <Label htmlFor="browser-notification-toggle" className="text-sm font-medium block">
                   Browser Notifications
                 </Label>
-                <p className="text-xs text-muted-foreground">
+                <p 
+                  className="text-xs"
+                  style={{ color: theme.colors.text.secondary }}
+                >
                   Show browser popups for new opportunities
                 </p>
               </div>
             </div>
             <Switch 
-              id="browser-notification-toggle" 
               checked={browserNotificationEnabled} 
-              onCheckedChange={(checked) => {
+              onChange={(checked: boolean) => {
                 handleBrowserNotifToggleChange(checked);
                 toggleBrowserNotifications(checked);
               }}
@@ -233,8 +330,15 @@ export default function AlertSettings({
               onClick={handleSaveNotifications}
               disabled={notifSaving || (!hasSoundChanged && !hasBrowserNotifChanged)}
               size="sm"
-              variant={notifSaved ? "outline" : "default"}
-              className={`transition-all ${notifSaved ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:text-green-700" : ""}`}
+              variant={notifSaved ? "outline" : "primary"}
+              className="transition-all"
+              style={{
+                ...(notifSaved ? {
+                  backgroundColor: `${theme.colors.status.success}10`,
+                  color: theme.colors.status.success,
+                  borderColor: theme.colors.status.success
+                } : {})
+              }}
             >
               {notifSaving ? (
                 <span className="flex items-center">
@@ -258,11 +362,41 @@ export default function AlertSettings({
       </div>
       
       {/* Info Section */}
-      <div className="bg-blue-50 text-blue-800 rounded-lg p-3 text-sm flex items-start">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500 mr-2 mt-0.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+      <div 
+        className="rounded-lg p-3 text-sm flex items-start"
+        style={{
+          backgroundColor: `${theme.colors.primary.main}10`,
+          color: theme.colors.text.primary
+        }}
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          className="mr-2 mt-0.5"
+          style={{ color: theme.colors.primary.main }}
+        >
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
+        </svg>
         <div>
-          <p className="font-medium mb-1">Alert Tips</p>
-          <p className="text-xs text-blue-700">
+          <p 
+            className="font-medium mb-1"
+            style={{ color: theme.colors.text.primary }}
+          >
+            Alert Tips
+          </p>
+          <p 
+            className="text-xs"
+            style={{ color: theme.colors.text.secondary }}
+          >
             For browser notifications, you may need to grant permission when prompted.
             Set your threshold conservatively to catch only the most profitable opportunities.
           </p>

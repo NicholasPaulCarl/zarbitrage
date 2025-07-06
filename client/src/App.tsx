@@ -24,7 +24,9 @@ import AdminPaymentAnalyticsNew from "@/pages/admin-payment-analytics-new";
 import AdminPaymentAnalyticsUnified from "@/pages/admin-payment-analytics-unified";
 import AdminCarousel from "@/pages/admin-carousel";
 import UILibrary from "@/pages/ui-library";
+import { DarkUIShowcase } from "@/pages/dark-ui-showcase";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./components/dark-ui/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import SubscriptionGuard from "@/components/SubscriptionGuard";
@@ -44,6 +46,7 @@ function Router() {
       <Route path="/premium" component={Premium} />
       <Route path="/trade-journal" component={ProtectedTradeJournal} />
       <Route path="/ui-library" component={UILibrary} />
+      <Route path="/dark-ui-showcase" component={DarkUIShowcase} />
       <Route path="/admin" component={AdminRoute} />
       <Route path="/admin-dashboard" component={AdminDashboardPage} />
       <Route path="/admin-login" component={AdminLogin} />
@@ -66,12 +69,14 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <Router />
-          <Toaster />
-        </AuthProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <Router />
+            <Toaster />
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

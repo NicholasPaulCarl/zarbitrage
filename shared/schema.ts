@@ -107,6 +107,15 @@ export const historicalSpreadSchema = z.object({
   route: z.string()
 });
 
+export const hourlySpreadSchema = z.object({
+  hourTimestamp: z.string(), // ISO timestamp rounded to the hour
+  highestSpread: z.number(),
+  lowestSpread: z.number(),
+  averageSpread: z.number().optional(),
+  route: z.string(),
+  dataPoints: z.number().optional()
+});
+
 // Exchange fee data 
 export const exchangeFeeSchema = z.object({
   name: z.string(),
@@ -148,6 +157,7 @@ export type Exchange = z.infer<typeof exchangeSchema>;
 export type ExchangeRate = z.infer<typeof exchangeRateSchema>;
 export type ArbitrageOpportunity = z.infer<typeof arbitrageOpportunitySchema>;
 export type HistoricalSpread = z.infer<typeof historicalSpreadSchema>;
+export type HourlySpread = z.infer<typeof hourlySpreadSchema>;
 export type ExchangeFee = z.infer<typeof exchangeFeeSchema>;
 export type CalculatorInput = z.infer<typeof calculatorInputSchema>;
 export type CalculatorResult = z.infer<typeof calculatorResultSchema>;

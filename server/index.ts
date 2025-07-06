@@ -204,6 +204,43 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Set up automated hourly data collection
+  const startHourlyDataCollection = () => {
+    const collectData = async () => {
+      try {
+        console.log("Running automated hourly spread data collection...");
+        
+        // TODO: Implement automated data collection
+        // Currently disabled due to missing arbitrage module
+        console.log("Automated data collection is temporarily disabled");
+      } catch (error) {
+        console.error("Error in automated hourly data collection:", error);
+      }
+    };
+    
+    // Run immediately on startup
+    collectData();
+    
+    // Then run every hour at the start of the hour
+    const scheduleNextRun = () => {
+      const now = new Date();
+      const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0);
+      const timeUntilNextHour = nextHour.getTime() - now.getTime();
+      
+      setTimeout(() => {
+        collectData();
+        // Schedule the next hourly run
+        setInterval(collectData, 60 * 60 * 1000); // Every hour
+      }, timeUntilNextHour);
+    };
+    
+    scheduleNextRun();
+    console.log("Automated hourly data collection scheduled");
+  };
+
+  // Start the hourly data collection
+  startHourlyDataCollection();
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

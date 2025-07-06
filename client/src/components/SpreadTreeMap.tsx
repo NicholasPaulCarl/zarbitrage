@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ArbitrageOpportunity } from '@shared/schema';
 import { Card, CardContent } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import { useTheme } from './dark-ui';
 import { useIsMobile } from '../hooks/use-mobile';
 import {
   ResponsiveContainer,
@@ -99,6 +100,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export default function SpreadTreeMap({ opportunities, loading }: SpreadTreeMapProps) {
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
   
   // Process data for treemap visualization
   const treeMapData = useMemo(() => {
@@ -115,22 +117,22 @@ export default function SpreadTreeMap({ opportunities, loading }: SpreadTreeMapP
       return [{
         name: "No valid opportunities",
         value: 1,
-        fill: "#f0f0f0"
+        fill: theme.colors.background.tertiary
       }];
     }
     
     // Transform data for TreeMap component
     return filteredOpportunities.map((opportunity, index) => {
-      // Use the primary color from theme.json (#FF007F) with varying opacity based on spread percentage
+      // Use the primary color (#6D00D1) with varying opacity based on spread percentage
       const opacity = 0.6 + Math.min(0.4, opportunity.spreadPercentage * 0.04);
       
-      // Color variants using the primary pink color (#FF007F) with different saturations
+      // Color variants using the primary purple color (#6D00D1) with different saturations
       const colors = [
-        `rgba(255, 0, 127, ${opacity})`,        // Primary pink
-        `rgba(235, 0, 117, ${opacity})`,        // Slightly darker pink
-        `rgba(215, 0, 107, ${opacity})`,        // Even darker pink
-        `rgba(255, 20, 147, ${opacity})`,       // Deep pink variant
-        `rgba(255, 40, 147, ${opacity * 0.95})` // Lighter pink
+        `rgba(109, 0, 209, ${opacity})`,        // Primary purple
+        `rgba(95, 0, 183, ${opacity})`,         // Slightly darker purple
+        `rgba(81, 0, 157, ${opacity})`,         // Even darker purple
+        `rgba(123, 20, 225, ${opacity})`,       // Deep purple variant
+        `rgba(139, 51, 255, ${opacity * 0.95})` // Lighter purple
       ];
       
       // Cycle through colors based on index
@@ -181,14 +183,14 @@ export default function SpreadTreeMap({ opportunities, loading }: SpreadTreeMapP
           dataKey="value"
           nameKey="name"
           aspectRatio={isMobile ? 1 : 4 / 3}
-          stroke="#ffffff"
+          stroke={theme.colors.background.primary}
           isAnimationActive
           animationDuration={800}
           // Add custom styles for the treemap labels
           style={{
             fontSize: '16px',
             fontWeight: 'bold',
-            fill: '#ffffff',
+            fill: theme.colors.primary.contrast,
             textShadow: '0 1px 3px rgba(0,0,0,0.7)'
           }}
         >

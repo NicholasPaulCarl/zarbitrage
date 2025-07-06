@@ -4,10 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Button, Input, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, useTheme } from '@/components/dark-ui';
 import { Loader2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import PaymentFlow from '@/components/PaymentFlow';
@@ -36,6 +33,7 @@ export default function Register() {
   const [registeredUser, setRegisteredUser] = useState<{id: number, email: string} | null>(null);
   const { register, login } = useAuth();
   const [, setLocation] = useLocation();
+  const { theme } = useTheme();
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),

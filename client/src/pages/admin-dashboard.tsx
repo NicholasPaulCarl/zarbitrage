@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import Layout from "@/components/Layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger, Badge, Avatar, AvatarFallback, AvatarImage, Alert, AlertDescription, AlertTitle, useTheme } from "@/components/dark-ui";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Check, Users, FileText, Bell, Settings, KeyRound, LogOut, Image, CreditCard } from "lucide-react";
 import { useAdminApi } from "@/hooks/use-admin-api";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { User, FeatureRequest } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +14,7 @@ export default function AdminDashboardPage() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("users");
+  const { theme } = useTheme();
   const {
     adminToken,
     isTokenValid,

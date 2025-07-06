@@ -1,10 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/dark-ui';
+import { Skeleton } from '@/components/dark-ui';
+import { Badge } from '@/components/dark-ui';
+import { useTheme } from '@/components/dark-ui';
 import { Globe, Flag } from 'lucide-react';
 import { formatZAR, formatUSD } from '@/lib/formatters';
 import { Exchange } from '@/lib/types';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Badge } from '@/components/ui/badge';
 
 interface PriceComparisonProps {
   internationalExchanges: (Exchange & { zarEquivalent?: number })[];
@@ -17,6 +18,7 @@ export default function PriceComparison({
   localExchanges,
   loading
 }: PriceComparisonProps) {
+  const { theme } = useTheme();
   const isMobile = useIsMobile();
 
   // Table view for desktop
@@ -31,7 +33,7 @@ export default function PriceComparison({
       ];
       
       return exchanges.map((item, index) => (
-        <tr key={`int-loading-${index}`} className="border-b border-gray-100">
+        <tr key={`int-loading-${index}`} style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }}>
           <td className="py-3 px-2 text-sm text-gray-800 font-medium">
             <Skeleton className={`h-5 w-${item.nameWidth}`} />
           </td>
@@ -46,10 +48,10 @@ export default function PriceComparison({
     }
 
     return internationalExchanges.map((exchange, index) => (
-      <tr key={`int-${index}`} className="border-b border-gray-100" data-exchange-id={exchange.name.toLowerCase()}>
-        <td className="py-3 px-2 text-sm text-gray-800 font-medium">{exchange.name}</td>
-        <td className="py-3 px-2 text-sm text-gray-800 text-right font-mono">{formatUSD(exchange.price)}</td>
-        <td className="py-3 px-2 text-sm text-gray-800 text-right font-mono">{formatZAR(exchange.zarEquivalent || 0)}</td>
+      <tr key={`int-${index}`} style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }} data-exchange-id={exchange.name.toLowerCase()}>
+        <td className="py-3 px-2 text-sm font-medium" style={{ color: theme.colors.text.primary }}>{exchange.name}</td>
+        <td className="py-3 px-2 text-sm text-right font-mono" style={{ color: theme.colors.text.primary }}>{formatUSD(exchange.price)}</td>
+        <td className="py-3 px-2 text-sm text-right font-mono" style={{ color: theme.colors.text.primary }}>{formatZAR(exchange.zarEquivalent || 0)}</td>
       </tr>
     ));
   };
@@ -65,7 +67,7 @@ export default function PriceComparison({
       ];
       
       return exchanges.map((item, index) => (
-        <tr key={`local-loading-${index}`} className="border-b border-gray-100">
+        <tr key={`local-loading-${index}`} style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }}>
           <td className="py-3 px-2 text-sm text-gray-800 font-medium">
             <Skeleton className={`h-5 w-${item.nameWidth}`} />
           </td>
@@ -80,10 +82,10 @@ export default function PriceComparison({
     }
 
     return localExchanges.map((exchange, index) => (
-      <tr key={`local-${index}`} className="border-b border-gray-100" data-exchange-id={exchange.name.toLowerCase()}>
-        <td className="py-3 px-2 text-sm text-gray-800 font-medium">{exchange.name}</td>
-        <td className="py-3 px-2 text-sm text-gray-800 text-right font-mono">{formatZAR(exchange.price)}</td>
-        <td className="py-3 px-2 text-sm text-gray-800 text-right font-mono">{formatUSD(exchange.usdEquivalent || 0)}</td>
+      <tr key={`local-${index}`} style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }} data-exchange-id={exchange.name.toLowerCase()}>
+        <td className="py-3 px-2 text-sm font-medium" style={{ color: theme.colors.text.primary }}>{exchange.name}</td>
+        <td className="py-3 px-2 text-sm text-right font-mono" style={{ color: theme.colors.text.primary }}>{formatZAR(exchange.price)}</td>
+        <td className="py-3 px-2 text-sm text-right font-mono" style={{ color: theme.colors.text.primary }}>{formatUSD(exchange.usdEquivalent || 0)}</td>
       </tr>
     ));
   };
@@ -99,7 +101,7 @@ export default function PriceComparison({
       ];
       
       return cardConfigs.map((config, index) => (
-        <div key={`int-card-loading-${index}`} className="p-3 border-b border-gray-100">
+        <div key={`int-card-loading-${index}`} className="p-3" style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }}>
           <div className="flex justify-between items-center mb-2">
             <Skeleton className={`h-5 w-${config.nameWidth}`} />
             <Skeleton className="h-4 w-12 rounded-full" />
@@ -119,19 +121,19 @@ export default function PriceComparison({
     }
 
     return internationalExchanges.map((exchange, index) => (
-      <div key={`int-card-${index}`} className="p-3 border-b border-gray-100" data-exchange-id={`card-${exchange.name.toLowerCase()}`}>
+      <div key={`int-card-${index}`} className="p-3" style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }} data-exchange-id={`card-${exchange.name.toLowerCase()}`}>
         <div className="flex justify-between items-center mb-2">
-          <div className="font-medium text-sm">{exchange.name}</div>
+          <div className="font-medium text-sm" style={{ color: theme.colors.text.primary }}>{exchange.name}</div>
           <Badge variant="outline" className="text-xs">USD</Badge>
         </div>
         <div className="flex justify-between gap-2 text-xs">
           <div className="flex flex-col">
-            <div className="text-gray-500">USD Price:</div>
-            <div className="font-mono font-medium">{formatUSD(exchange.price)}</div>
+            <div style={{ color: theme.colors.text.secondary }}>USD Price:</div>
+            <div className="font-mono font-medium" style={{ color: theme.colors.text.primary }}>{formatUSD(exchange.price)}</div>
           </div>
           <div className="flex flex-col items-end">
-            <div className="text-gray-500">ZAR Equivalent:</div>
-            <div className="font-mono font-medium">{formatZAR(exchange.zarEquivalent || 0)}</div>
+            <div style={{ color: theme.colors.text.secondary }}>ZAR Equivalent:</div>
+            <div className="font-mono font-medium" style={{ color: theme.colors.text.primary }}>{formatZAR(exchange.zarEquivalent || 0)}</div>
           </div>
         </div>
       </div>
@@ -148,7 +150,7 @@ export default function PriceComparison({
       ];
       
       return cardConfigs.map((config, index) => (
-        <div key={`local-card-loading-${index}`} className="p-3 border-b border-gray-100">
+        <div key={`local-card-loading-${index}`} className="p-3" style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }}>
           <div className="flex justify-between items-center mb-2">
             <Skeleton className={`h-5 w-${config.nameWidth}`} />
             <Skeleton className="h-4 w-12 rounded-full" />
@@ -168,19 +170,19 @@ export default function PriceComparison({
     }
 
     return localExchanges.map((exchange, index) => (
-      <div key={`local-card-${index}`} className="p-3 border-b border-gray-100" data-exchange-id={`card-${exchange.name.toLowerCase()}`}>
+      <div key={`local-card-${index}`} className="p-3" style={{ borderBottom: `1px solid ${theme.colors.border.primary}` }} data-exchange-id={`card-${exchange.name.toLowerCase()}`}>
         <div className="flex justify-between items-center mb-2">
-          <div className="font-medium text-sm">{exchange.name}</div>
+          <div className="font-medium text-sm" style={{ color: theme.colors.text.primary }}>{exchange.name}</div>
           <Badge variant="secondary" className="text-xs">ZAR</Badge>
         </div>
         <div className="flex justify-between gap-2 text-xs">
           <div className="flex flex-col">
-            <div className="text-gray-500">ZAR Price:</div>
-            <div className="font-mono font-medium">{formatZAR(exchange.price)}</div>
+            <div style={{ color: theme.colors.text.secondary }}>ZAR Price:</div>
+            <div className="font-mono font-medium" style={{ color: theme.colors.text.primary }}>{formatZAR(exchange.price)}</div>
           </div>
           <div className="flex flex-col items-end">
-            <div className="text-gray-500">USD Equivalent:</div>
-            <div className="font-mono font-medium">{formatUSD(exchange.usdEquivalent || 0)}</div>
+            <div style={{ color: theme.colors.text.secondary }}>USD Equivalent:</div>
+            <div className="font-mono font-medium" style={{ color: theme.colors.text.primary }}>{formatUSD(exchange.usdEquivalent || 0)}</div>
           </div>
         </div>
       </div>
@@ -193,7 +195,7 @@ export default function PriceComparison({
       <Card data-testid="international-exchanges">
         <CardHeader className="pb-2">
           <CardTitle className="text-base md:text-lg flex items-center">
-            <Globe className="h-5 w-5 text-primary mr-2" />
+            <Globe className="h-5 w-5 mr-2" style={{ color: theme.colors.primary.main }} />
             International Exchanges
           </CardTitle>
         </CardHeader>
@@ -202,10 +204,10 @@ export default function PriceComparison({
           <div className="hidden md:block overflow-x-auto w-full scrollbar-thin">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-2 px-4 text-left text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap">Exchange</th>
-                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap">BTC/USD</th>
-                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap">≈ ZAR</th>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.border.secondary}` }}>
+                  <th className="py-2 px-4 text-left text-xs md:text-sm font-medium whitespace-nowrap" style={{ color: theme.colors.text.secondary }}>Exchange</th>
+                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium whitespace-nowrap" style={{ color: theme.colors.text.secondary }}>BTC/USD</th>
+                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium whitespace-nowrap" style={{ color: theme.colors.text.secondary }}>≈ ZAR</th>
                 </tr>
               </thead>
               <tbody>
@@ -225,7 +227,7 @@ export default function PriceComparison({
       <Card data-testid="local-exchanges">
         <CardHeader className="pb-2">
           <CardTitle className="text-base md:text-lg flex items-center">
-            <Flag className="h-5 w-5 text-primary mr-2" />
+            <Flag className="h-5 w-5 mr-2" style={{ color: theme.colors.primary.main }} />
             South African Exchanges
           </CardTitle>
         </CardHeader>
@@ -234,10 +236,10 @@ export default function PriceComparison({
           <div className="hidden md:block overflow-x-auto w-full scrollbar-thin">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-2 px-4 text-left text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap">Exchange</th>
-                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap">BTC/ZAR</th>
-                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium text-gray-500 whitespace-nowrap">≈ USD</th>
+                <tr style={{ borderBottom: `1px solid ${theme.colors.border.secondary}` }}>
+                  <th className="py-2 px-4 text-left text-xs md:text-sm font-medium whitespace-nowrap" style={{ color: theme.colors.text.secondary }}>Exchange</th>
+                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium whitespace-nowrap" style={{ color: theme.colors.text.secondary }}>BTC/ZAR</th>
+                  <th className="py-2 px-4 text-right text-xs md:text-sm font-medium whitespace-nowrap" style={{ color: theme.colors.text.secondary }}>≈ USD</th>
                 </tr>
               </thead>
               <tbody>

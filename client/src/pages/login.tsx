@@ -4,10 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Button, Input, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, useTheme } from '@/components/dark-ui';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +23,7 @@ function DevLoginHelper() {
   const { login } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { theme } = useTheme();
   
   const handleDevLogin = async (username: string, password: string) => {
     try {
@@ -72,11 +70,11 @@ function DevLoginHelper() {
   // Only show in development environment
   if (import.meta.env.DEV) {
     return (
-      <div className="mt-6 p-4 border border-dashed border-amber-500 rounded-md bg-amber-50">
+      <div className="mt-6 p-4 border border-dashed rounded-md" style={{ borderColor: theme.colors.status.warning, backgroundColor: theme.colors.status.warning + '10' }}>
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-amber-600" />
-            <h3 className="text-sm font-semibold text-amber-800">Development Mode - Test Accounts</h3>
+            <ShieldAlert className="h-4 w-4" style={{ color: theme.colors.status.warning }} />
+            <h3 className="text-sm font-semibold" style={{ color: theme.colors.status.warning }}>Development Mode - Test Accounts</h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button 
@@ -110,6 +108,7 @@ export default function Login() {
   const { login } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { theme } = useTheme();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
