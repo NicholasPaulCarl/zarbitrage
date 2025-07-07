@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Label, Input, Switch, Button, useTheme } from '@/components/dark-ui';
-import { Save, Check } from 'lucide-react';
+import { Save, Check, TestTube } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface AlertSettingsProps {
   threshold: number;
@@ -9,6 +11,8 @@ interface AlertSettingsProps {
   browserNotificationEnabled: boolean;
   toggleSoundAlerts: (enabled: boolean) => void;
   toggleBrowserNotifications: (enabled: boolean) => void;
+  testBrowserNotification?: () => Promise<{ success: boolean; message: string }>;
+  testMultipleToasts?: () => void;
 }
 
 export default function AlertSettings({
@@ -17,13 +21,18 @@ export default function AlertSettings({
   soundEnabled,
   browserNotificationEnabled,
   toggleSoundAlerts,
-  toggleBrowserNotifications
+  toggleBrowserNotifications,
+  testBrowserNotification,
+  testMultipleToasts
 }: AlertSettingsProps) {
   const { theme } = useTheme();
+  const { isAdmin } = useAuth();
+  const { toast } = useToast();
   const [inputValue, setInputValue] = useState<string>(threshold.toString());
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [isTestingNotification, setIsTestingNotification] = useState<boolean>(false);
   
   // Track notification setting changes
   const [hasSoundChanged, setHasSoundChanged] = useState<boolean>(false);
@@ -104,6 +113,30 @@ export default function AlertSettings({
         setNotifSaved(false);
       }, 2000);
     }, 500);
+  };
+
+  // Handle test browser notification
+  const handleTestNotification = async () => {
+    if (!testBrowserNotification) return;
+    
+    setIsTestingNotification(true);
+    try {
+      const result = await testBrowserNotification();
+      
+      toast({
+        title: result.success ? "Test Successful" : "Test Failed",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "An unexpected error occurred while testing browser notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingNotification(false);
+    }
   };
 
   return (
@@ -315,13 +348,41 @@ export default function AlertSettings({
                 </p>
               </div>
             </div>
-            <Switch 
-              checked={browserNotificationEnabled} 
-              onCheckedChange={(checked: boolean) => {
-                handleBrowserNotifToggleChange(checked);
-                toggleBrowserNotifications(checked);
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={browserNotificationEnabled} 
+                onCheckedChange={(checked: boolean) => {
+                  handleBrowserNotifToggleChange(checked);
+                  toggleBrowserNotifications(checked);
+                }}
+              />
+              {/* Admin Test Button */}
+              {isAdmin && testBrowserNotification && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestNotification}
+                  disabled={isTestingNotification || !browserNotificationEnabled}
+                  className="ml-2 h-8 px-2"
+                >
+                  <TestTube className="h-3 w-3 mr-1" />
+                  {isTestingNotification ? 'Testing...' : 'Test'}
+                </Button>
+              )}
+              {/* Admin Test Multiple Toasts Button */}
+              {isAdmin && testMultipleToasts && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={testMultipleToasts}
+                  className="ml-2 h-8 px-2"
+                  title="Test multiple stacked toast notifications"
+                >
+                  <TestTube className="h-3 w-3 mr-1" />
+                  Multi
+                </Button>
+              )}
+            </div>
           </div>
           
           {/* Save Button for Notification Settings */}

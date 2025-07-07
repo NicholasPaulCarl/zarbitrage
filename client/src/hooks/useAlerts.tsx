@@ -207,10 +207,10 @@ export default function useAlerts() {
     // Update debounce timestamp
     setLastAlertTimestamp(now);
     
-    // Show toast notification
+    // Show enhanced toast notification
     toast({
-      title: "Arbitrage opportunity!",
-      description: `${opportunity.route}: ${opportunity.spreadPercentage.toFixed(2)}% spread detected`,
+      title: "🚨 Arbitrage Opportunity Detected!",
+      description: `${opportunity.route}: ${opportunity.spreadPercentage.toFixed(2)}% spread (${opportunity.spread ? `R${opportunity.spread.toLocaleString()}` : 'Profit'})`,
       variant: "default",
       duration: 5000
     });
@@ -259,6 +259,75 @@ export default function useAlerts() {
     clearAlertsMutation.mutate();
   }, [clearAlertsMutation]);
 
+  // Test multiple toast notifications (admin feature)
+  const testMultipleToasts = useCallback(() => {
+    const testOpportunities = [
+      { route: 'Binance → VALR', spread: 1000, spreadPercentage: 2.5 },
+      { route: 'Kraken → LUNO', spread: 1500, spreadPercentage: 3.2 },
+      { route: 'Bitfinex → AltcoinTrader', spread: 800, spreadPercentage: 1.8 }
+    ];
+
+    testOpportunities.forEach((opportunity, index) => {
+      setTimeout(() => {
+        toast({
+          title: `🚨 Test Alert ${index + 1}`,
+          description: `${opportunity.route}: ${opportunity.spreadPercentage}% spread (R${opportunity.spread.toLocaleString()})`,
+          variant: "default",
+          duration: 10000 // Keep longer for testing
+        });
+      }, index * 500); // Stagger the notifications
+    });
+  }, [toast]);
+
+  // Test browser notification (admin feature)
+  const testBrowserNotification = useCallback(async () => {
+    try {
+      // Check if browser supports notifications
+      if (!("Notification" in window)) {
+        throw new Error('Browser notifications are not supported in this browser');
+      }
+
+      // Request permission if needed
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+
+      if (permission === 'denied') {
+        throw new Error('Browser notifications are blocked. Please enable them in your browser settings.');
+      }
+
+      if (permission === 'granted') {
+        // Create test notification
+        const notification = new Notification('Test Alert - Zarbitrage', {
+          body: 'Sample arbitrage opportunity: Binance → VALR: 3.45% spread detected',
+          icon: '/favicon.ico',
+          requireInteraction: false
+        });
+
+        notification.onerror = () => {
+          console.error('Test browser notification failed to display');
+        };
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        // Auto-close after 5 seconds
+        setTimeout(() => notification.close(), 5000);
+
+        return { success: true, message: 'Test notification sent successfully!' };
+      }
+    } catch (error) {
+      console.error('Test browser notification failed:', error);
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to send test notification'
+      };
+    }
+  }, []);
+
   // Combined loading state
   const isLoading = alertHistoryQuery.isLoading || 
                     addAlertMutation.isPending || 
@@ -272,6 +341,8 @@ export default function useAlerts() {
     triggerAlert,
     toggleSoundAlerts,
     toggleBrowserNotifications,
-    clearAlerts
+    clearAlerts,
+    testBrowserNotification,
+    testMultipleToasts
   };
 }
