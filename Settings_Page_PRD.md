@@ -52,9 +52,9 @@ This PRD outlines the requirements for a comprehensive settings page that will s
 
 #### **Active Arbitrageur (Maya)**
 - Uses platform daily for trading decisions
-- Needs detailed alert customization
 - Wants API access for automated tools
 - Requires fast data refresh and custom preferences
+- Needs enhanced security features
 
 #### **Institutional User (David)**
 - Manages team accounts
@@ -64,12 +64,11 @@ This PRD outlines the requirements for a comprehensive settings page that will s
 
 ### 3.2 Key Use Cases
 
-1. **First-Time Setup**: New user configures initial preferences and alerts
+1. **First-Time Setup**: New user configures initial preferences and trading settings
 2. **Subscription Management**: User upgrades, downgrades, or manages billing
 3. **Security Enhancement**: User enables 2FA and manages API keys
-4. **Alert Optimization**: User fine-tunes notification preferences for trading style
+4. **Trading Optimization**: User customizes trading preferences and exchange settings
 5. **Data Management**: User exports data or deletes account for privacy compliance
-6. **Integration Setup**: User connects external wallets or exchange accounts
 
 ---
 
@@ -94,11 +93,6 @@ Settings
 │   ├── Payment Methods
 │   ├── Billing History
 │   └── Usage & Limits
-├── Alerts & Notifications
-│   ├── Price Alert Settings
-│   ├── Notification Preferences
-│   ├── Alert History Management
-│   └── Communication Channels
 ├── Trading Preferences
 │   ├── Default Exchanges
 │   ├── Currency & Display Settings
@@ -109,11 +103,6 @@ Settings
 │   ├── Dashboard Layout
 │   ├── Chart Preferences
 │   └── Accessibility Options
-├── Integrations & APIs
-│   ├── Exchange Connections
-│   ├── Wallet Integrations
-│   ├── Third-party Tools
-│   └── Webhook Configuration
 └── Data & Privacy
     ├── Data Export
     ├── Privacy Controls
@@ -190,27 +179,7 @@ Settings
 - **Feature Access**: Real-time feature availability based on subscription
 - **Overage Alerts**: Notifications when approaching limits
 
-#### **4.2.4 Alerts & Notifications**
-
-**Price Alert Settings**
-- **Threshold Management**: Default spreads, custom percentage ranges
-- **Exchange Selection**: Preferred exchanges for monitoring
-- **Alert Frequency**: Immediate, batched (5min, 15min, hourly)
-- **Cool-down Periods**: Prevent alert spam with configurable delays
-
-**Notification Preferences**
-- **Delivery Channels**: In-app, email, SMS, push notifications, webhook
-- **Notification Types**: Price alerts, account updates, system announcements
-- **Quiet Hours**: Do not disturb scheduling with timezone support
-- **Emergency Overrides**: Critical alerts that bypass quiet hours
-
-**Alert History Management**
-- **History Retention**: Configure how long to keep alert history
-- **Export Options**: CSV/JSON export of alert data
-- **Bulk Actions**: Mark as read, delete multiple alerts
-- **Search & Filter**: Find specific alerts by date, exchange, or threshold
-
-#### **4.2.5 Trading Preferences**
+#### **4.2.4 Trading Preferences**
 
 **Default Exchanges**
 - **Preferred Exchanges**: Primary exchanges for price monitoring
@@ -230,7 +199,7 @@ Settings
 - **Custom Schedules**: Different rates for different exchanges
 - **Manual Refresh**: Always-available manual refresh button
 
-#### **4.2.6 Appearance & Interface**
+#### **4.2.5 Appearance & Interface**
 
 **Theme Settings**
 - **Theme Selection**: Light, dark, auto (system preference)
@@ -250,27 +219,7 @@ Settings
 - **Indicators**: Technical analysis indicators and overlays
 - **Color Schemes**: Chart color palettes for different data types
 
-#### **4.2.7 Integrations & APIs (NEW)**
-
-**Exchange Connections**
-- **API Credentials**: Securely store exchange API keys for enhanced data
-- **Permission Levels**: Read-only vs. trading permissions
-- **Connection Status**: Real-time monitoring of API connections
-- **Rate Limiting**: Exchange-specific rate limit management
-
-**Wallet Integrations**
-- **Wallet Addresses**: Monitor balances across multiple wallets
-- **Portfolio Tracking**: Aggregate portfolio value calculations
-- **Transaction Monitoring**: Track deposits/withdrawals for arbitrage
-- **Security Warnings**: Alerts for unusual wallet activity
-
-**Third-party Tools**
-- **Trading Bots**: Integration with popular trading automation tools
-- **Portfolio Managers**: Connect to portfolio tracking applications
-- **Tax Software**: Integration with crypto tax calculation tools
-- **Analytics Tools**: Export data to external analysis platforms
-
-#### **4.2.8 Data & Privacy**
+#### **4.2.6 Data & Privacy**
 
 **Data Export**
 - **Complete Export**: Full account data in JSON/CSV format
@@ -330,9 +279,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS (
   theme_preference TEXT DEFAULT 'dark',
   timezone TEXT DEFAULT 'UTC',
   preferred_currency TEXT DEFAULT 'USD',
-  notification_email BOOLEAN DEFAULT TRUE,
-  notification_sms BOOLEAN DEFAULT FALSE,
-  alert_threshold_default DECIMAL DEFAULT 3.0,
   privacy_analytics_enabled BOOLEAN DEFAULT TRUE,
   privacy_marketing_enabled BOOLEAN DEFAULT TRUE
 );
@@ -386,9 +332,6 @@ DELETE /api/settings/security/sessions/:id // End session
 GET    /api/settings/api-keys         // List API keys
 POST   /api/settings/api-keys         // Create API key
 DELETE /api/settings/api-keys/:id     // Revoke API key
-
-GET    /api/settings/notifications    // Get notification preferences
-PATCH  /api/settings/notifications    // Update notification settings
 
 GET    /api/settings/privacy          // Get privacy settings
 PATCH  /api/settings/privacy          // Update privacy settings
@@ -466,26 +409,22 @@ DELETE /api/settings/account          // Delete account
 
 ### 7.3 Phase 3: Advanced Features (Week 5-6)
 **Power User Features**
-- Alert and notification customization
 - Trading preferences and exchange settings
 - Theme and appearance customization
 - Data export functionality
 
 **Deliverables:**
-- Advanced alert configuration
-- Comprehensive notification preferences
+- Trading preferences configuration
 - Complete theme customization
 - Data export and account deletion
 
-### 7.4 Phase 4: Integrations & Polish (Week 7-8)
-**Integrations and Final Polish**
-- Third-party integrations (exchanges, wallets)
+### 7.4 Phase 4: Final Polish (Week 7-8)
+**Final Polish and Optimization**
 - Mobile app optimization
 - Performance optimization
 - User testing and refinements
 
 **Deliverables:**
-- Exchange API integrations
 - Mobile-optimized experience
 - Performance improvements
 - Documentation and user guides
@@ -513,12 +452,6 @@ DELETE /api/settings/account          // Delete account
 - [ ] Users can upgrade/downgrade plans with immediate effect
 - [ ] Billing history is accessible with downloadable receipts
 - [ ] Payment methods can be added, updated, and removed
-
-#### **Alert Configuration**
-- [ ] Default alert thresholds can be customized
-- [ ] Notification channels can be individually enabled/disabled
-- [ ] Alert history can be filtered, searched, and exported
-- [ ] Quiet hours prevent non-critical notifications
 
 #### **Data Management**
 - [ ] Users can export their complete account data
@@ -629,12 +562,12 @@ DELETE /api/settings/account          // Delete account
 - **Advanced Analytics**: Personal trading performance analytics
 - **Team Management**: Multi-user accounts for institutional users
 - **Mobile App Settings**: Native mobile app settings synchronization
-- **Webhook Alerts**: Custom webhook endpoints for external integrations
+- **Alert System**: Comprehensive price alert and notification system
 
 ### 11.2 Medium-term (6-12 months)
 - **White-label Options**: Custom branding for enterprise users
-- **Advanced Integrations**: TradingView, MetaTrader integrations
-- **Machine Learning**: AI-powered alert optimization
+- **Third-party Integrations**: Exchange APIs and wallet connections
+- **Machine Learning**: AI-powered trading recommendations
 - **Multi-language Support**: Internationalization for global markets
 
 ### 11.3 Long-term (12+ months)
