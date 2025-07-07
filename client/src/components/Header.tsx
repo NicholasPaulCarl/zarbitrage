@@ -75,7 +75,7 @@ export default function Header({ refreshRate, setRefreshRate, refreshData, isLoa
     },
     { 
       path: '/alerts', 
-      label: 'Browser Alerts', 
+      label: 'Alerts', 
       icon: <AlertCircle className="h-4 w-4 mr-2" />,
       premiumFeature: true
     },
@@ -96,13 +96,6 @@ export default function Header({ refreshRate, setRefreshRate, refreshData, isLoa
       path: '/premium', 
       label: 'Premium', 
       icon: <CreditCard className="h-4 w-4 mr-2" />,
-      premiumFeature: true,
-      requiresAuth: !user
-    },
-    {
-      path: '/webhook-alerts', 
-      label: 'Webhook Alerts', 
-      icon: <Webhook className="h-4 w-4 mr-2" />,
       premiumFeature: true,
       requiresAuth: !user
     },

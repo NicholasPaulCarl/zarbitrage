@@ -250,6 +250,79 @@ Add a new trade journal entry.
 }
 ```
 
+### Webhook Alerts
+
+#### GET /webhook-alerts
+Get user's webhook alerts.
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "userId": 1,
+    "name": "Discord Alert",
+    "webhookUrl": "https://discord.com/api/webhooks/...",
+    "isActive": true,
+    "triggerThreshold": "3.0",
+    "customPayload": "{\"content\": \"Alert: {{route}}\"}",
+    "httpMethod": "POST",
+    "headers": "{\"Authorization\": \"Bearer token\"}",
+    "createdAt": "2025-07-03T20:33:32.531Z",
+    "lastTriggered": "2025-07-03T21:15:45.123Z",
+    "triggerCount": 5
+  }
+]
+```
+
+#### POST /webhook-alerts
+Create a new webhook alert.
+
+**Request Body:**
+```json
+{
+  "name": "Discord Alert",
+  "webhookUrl": "https://discord.com/api/webhooks/...",
+  "triggerThreshold": "3.0",
+  "isActive": true,
+  "customPayload": "{\"content\": \"Alert: {{route}}\"}",
+  "httpMethod": "POST",
+  "headers": "{\"Authorization\": \"Bearer token\"}"
+}
+```
+
+#### PATCH /webhook-alerts/:id
+Update an existing webhook alert.
+
+**Request Body:**
+```json
+{
+  "name": "Updated Discord Alert",
+  "isActive": false,
+  "triggerThreshold": "5.0"
+}
+```
+
+#### DELETE /webhook-alerts/:id
+Delete a webhook alert.
+
+**Response:**
+```json
+{
+  "message": "Webhook alert deleted successfully"
+}
+```
+
+#### POST /webhook-alerts/:id/test
+Test a webhook alert by sending a test message.
+
+**Response:**
+```json
+{
+  "message": "Test webhook sent successfully"
+}
+```
+
 ### Admin Routes
 
 All admin routes require authentication and admin privileges.
@@ -372,5 +445,23 @@ interface Alert {
   exchange?: string;
   isActive: boolean;
   createdAt: Date;
+}
+```
+
+### Webhook Alert
+```typescript
+interface WebhookAlert {
+  id: number;
+  userId: number;
+  name: string;
+  webhookUrl: string;
+  isActive: boolean;
+  triggerThreshold: string;
+  customPayload?: string;
+  httpMethod: "POST" | "PUT" | "PATCH";
+  headers?: string;
+  createdAt: Date;
+  lastTriggered?: Date;
+  triggerCount: number;
 }
 ```

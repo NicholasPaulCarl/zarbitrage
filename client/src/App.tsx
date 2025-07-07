@@ -10,7 +10,7 @@ import Profile from "@/pages/profile";
 import TreeMap from "@/pages/treemap";
 import Admin from "@/pages/admin";
 import FeatureRequests from "@/pages/feature-requests";
-import { ProtectedAlerts, ProtectedWebhookAlerts, ProtectedCalculator, ProtectedTradeJournal } from "@/components/PremiumRoutes";
+import { ProtectedAlerts, WebhookAlertsRedirect, ProtectedCalculator, ProtectedTradeJournal } from "@/components/PremiumRoutes";
 import Premium from "@/pages/premium";
 import DebugPage from "@/pages/debug";
 import AdminBypassPage from "@/pages/admin-bypass";
@@ -38,7 +38,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/alerts" component={ProtectedAlerts} />
-      <Route path="/webhook-alerts" component={ProtectedWebhookAlerts} />
+      <Route path="/webhook-alerts" component={WebhookAlertsRedirect} />
       <Route path="/calculator" component={ProtectedCalculator} />
       <Route path="/profile" component={Profile} />
       <Route path="/treemap" component={TreeMap} />

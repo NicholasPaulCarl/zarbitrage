@@ -5,7 +5,7 @@ export default defineConfig({
     setupNodeEvents(on, config) {
       // implement node event listeners here
     },
-    specPattern: "client/src/tests/**/*.spec.ts",
+    specPattern: ["client/src/tests/**/*.spec.ts", "tests/**/*.cy.ts"],
     baseUrl: "http://localhost:3000",
   },
 });

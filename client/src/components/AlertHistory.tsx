@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/dark-ui';
 import { Trash2, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatZAR, formatDateTime } from '@/lib/formatters';
 import { AlertHistoryItem } from '@/lib/types';
+import { useTheme } from '@/components/dark-ui';
 
 interface AlertHistoryProps {
   alerts: AlertHistoryItem[];
@@ -11,6 +12,7 @@ interface AlertHistoryProps {
 }
 
 export default function AlertHistory({ alerts, clearAlerts, isLoading = false }: AlertHistoryProps) {
+  const { theme } = useTheme();
   const ITEMS_PER_PAGE = 5;
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -88,32 +90,48 @@ export default function AlertHistory({ alerts, clearAlerts, isLoading = false }:
     return getCurrentPageItems().map((alert) => (
       <div 
         key={alert.id} 
-        className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 bg-background" 
+        className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0"
+        style={{ backgroundColor: theme.colors.background.primary }} 
         data-alert-id={alert.id}
       >
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary"></div>
+            <div 
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: theme.colors.primary.main }}
+            ></div>
             <div className="text-sm font-medium flex items-center flex-wrap gap-1">
-              <span className="truncate max-w-[150px] sm:max-w-none">{alert.route}</span>
+              <span 
+                className="truncate max-w-[150px] sm:max-w-none"
+                style={{ color: theme.colors.text.primary }}
+              >
+                {alert.route}
+              </span>
             </div>
           </div>
           <div className="ml-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
             <div className="flex items-center">
-              <span className="text-xs text-muted-foreground mr-1.5">Spread:</span>
-              <span className="text-xs font-medium text-green-600">{alert.spreadPercentage.toFixed(2)}%</span>
+              <span className="text-xs mr-1.5" style={{ color: theme.colors.text.secondary }}>Spread:</span>
+              <span className="text-xs font-medium" style={{ color: theme.colors.status.success }}>{alert.spreadPercentage.toFixed(2)}%</span>
             </div>
             <div className="flex items-center">
-              <span className="text-xs text-muted-foreground mr-1.5">Value:</span>
-              <span className="text-xs font-medium">{formatZAR(alert.spread)}</span>
+              <span className="text-xs mr-1.5" style={{ color: theme.colors.text.secondary }}>Value:</span>
+              <span className="text-xs font-medium" style={{ color: theme.colors.text.primary }}>{formatZAR(alert.spread)}</span>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs" style={{ color: theme.colors.text.secondary }}>
               {formatDateTime(alert.timestamp)}
             </div>
           </div>
         </div>
         <div className="ml-4 sm:ml-0">
-          <div className="px-2.5 py-1 bg-green-50 border border-green-100 text-green-700 text-xs rounded-full font-medium">
+          <div 
+            className="px-2.5 py-1 text-xs rounded-full font-medium"
+            style={{
+              backgroundColor: `${theme.colors.status.success}15`,
+              border: `1px solid ${theme.colors.status.success}30`,
+              color: theme.colors.status.success
+            }}
+          >
             Profitable
           </div>
         </div>
@@ -124,10 +142,10 @@ export default function AlertHistory({ alerts, clearAlerts, isLoading = false }:
   // No longer needed as pagination is integrated into the main return
 
   return (
-    <div className="bg-white rounded-lg">
+    <div className="rounded-lg">
       {/* Header with clear button */}
       <div className="flex justify-between items-center mb-3">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm" style={{ color: theme.colors.text.secondary }}>
           Showing {Math.min(sortedAlerts.length, ITEMS_PER_PAGE)} of {alerts.length} alerts
         </p>
         <div className="flex items-center space-x-2">
@@ -135,11 +153,11 @@ export default function AlertHistory({ alerts, clearAlerts, isLoading = false }:
             <Loader className="h-4 w-4 text-muted-foreground animate-spin" />
           )}
           <Button 
-            variant="outline" 
+            variant="danger" 
             size="sm"
             onClick={clearAlerts}
             disabled={isLoading || !alerts || alerts.length === 0}
-            className="h-8 text-xs border-muted-foreground/30 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors" 
+            className="h-8 text-xs" 
             id="clear-alerts"
           >
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
@@ -149,14 +167,27 @@ export default function AlertHistory({ alerts, clearAlerts, isLoading = false }:
       </div>
       
       {/* Alerts list */}
-      <div className="border rounded-lg overflow-hidden">
-        <div className="divide-y divide-border min-h-[300px] bg-muted/20">
+      <div 
+        className="border rounded-lg overflow-hidden"
+        style={{ borderColor: theme.colors.border.primary }}
+      >
+        <div 
+          className="divide-y min-h-[300px]"
+          style={{ 
+            borderColor: theme.colors.border.primary
+          }}
+        >
           {renderAlerts()}
         </div>
         
         {/* Pagination */}
         {alerts.length > 0 && !isLoading && (
-          <div className="p-2 flex justify-between items-center border-t bg-muted/10">
+          <div 
+            className="p-2 flex justify-between items-center border-t"
+            style={{ 
+              borderColor: theme.colors.border.primary
+            }}
+          >
             <Button 
               variant="ghost" 
               size="sm" 

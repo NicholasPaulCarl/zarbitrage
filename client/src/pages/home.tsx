@@ -2,7 +2,7 @@ import { useState } from 'react';
 import ExchangeRateSummary from '@/components/ExchangeRateSummary';
 import PriceComparison from '@/components/PriceComparison';
 import ArbitrageOpportunities from '@/components/ArbitrageOpportunities';
-import AlertNotification from '@/components/AlertNotification';
+import { useToast } from '@/hooks/use-toast';
 import TinyLineChart from '@/components/TinyLineChart';
 import SpreadBarChart from '@/components/SpreadBarChart';
 // import AIAdvisor from '@/components/AIAdvisor';
@@ -18,6 +18,7 @@ import { Bell, BarChart, Crown, CheckCircle } from 'lucide-react';
 
 export default function Home() {
   const { theme } = useTheme();
+  const { toast } = useToast();
   
   // Get refresh rate from localStorage or default to 30 seconds
   const [initialRefreshRate] = useState<number>(() => {
@@ -330,19 +331,7 @@ export default function Home() {
         </Card>
       )}
       
-      {isAuthenticated && (
-        <AlertNotification 
-          visible={(crossingThreshold === true) || false}
-          opportunity={
-            Array.isArray(data.opportunities) && 
-            data.opportunities.length > 0 && 
-            data.opportunities[0] ? 
-              data.opportunities[0] : null
-          }
-        />
-      )}
-      
-      {/* Alert will float above content when visible */}
+      {/* Alerts are now handled via toast notifications in useAlerts hook */}
     </>
   );
 
