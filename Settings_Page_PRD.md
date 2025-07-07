@@ -53,8 +53,8 @@ This PRD outlines the requirements for a comprehensive settings page that will s
 #### **Active Arbitrageur (Maya)**
 - Uses platform daily for trading decisions
 - Wants API access for automated tools
-- Requires fast data refresh and custom preferences
 - Needs enhanced security features
+- Values customizable interface and themes
 
 #### **Institutional User (David)**
 - Manages team accounts
@@ -64,10 +64,10 @@ This PRD outlines the requirements for a comprehensive settings page that will s
 
 ### 3.2 Key Use Cases
 
-1. **First-Time Setup**: New user configures initial preferences and trading settings
+1. **First-Time Setup**: New user configures initial preferences and account settings
 2. **Subscription Management**: User upgrades, downgrades, or manages billing
 3. **Security Enhancement**: User enables 2FA and manages API keys
-4. **Trading Optimization**: User customizes trading preferences and exchange settings
+4. **Appearance Customization**: User customizes theme and interface preferences
 5. **Data Management**: User exports data or deletes account for privacy compliance
 
 ---
@@ -93,11 +93,6 @@ Settings
 │   ├── Payment Methods
 │   ├── Billing History
 │   └── Usage & Limits
-├── Trading Preferences
-│   ├── Default Exchanges
-│   ├── Currency & Display Settings
-│   ├── Data Refresh Rates
-│   └── Risk & Threshold Settings
 ├── Appearance & Interface
 │   ├── Theme Settings
 │   ├── Dashboard Layout
@@ -179,27 +174,7 @@ Settings
 - **Feature Access**: Real-time feature availability based on subscription
 - **Overage Alerts**: Notifications when approaching limits
 
-#### **4.2.4 Trading Preferences**
-
-**Default Exchanges**
-- **Preferred Exchanges**: Primary exchanges for price monitoring
-- **Exchange Rankings**: Custom ordering for arbitrage calculations
-- **Excluded Exchanges**: Blacklist exchanges due to access restrictions
-- **Fee Configuration**: Custom fee rates for accurate profit calculations
-
-**Currency & Display Settings**
-- **Base Currency**: USD, ZAR, EUR, GBP for profit calculations
-- **Number Formatting**: Decimal places, thousands separators
-- **Timezone**: Local timezone for timestamps and scheduling
-- **Language**: Platform language (future internationalization)
-
-**Data Refresh Rates**
-- **Real-time Updates**: 10s, 30s, 1min, 5min intervals
-- **Battery Optimization**: Slower refresh on mobile/low battery
-- **Custom Schedules**: Different rates for different exchanges
-- **Manual Refresh**: Always-available manual refresh button
-
-#### **4.2.5 Appearance & Interface**
+#### **4.2.4 Appearance & Interface**
 
 **Theme Settings**
 - **Theme Selection**: Light, dark, auto (system preference)
@@ -219,7 +194,7 @@ Settings
 - **Indicators**: Technical analysis indicators and overlays
 - **Color Schemes**: Chart color palettes for different data types
 
-#### **4.2.6 Data & Privacy**
+#### **4.2.5 Data & Privacy**
 
 **Data Export**
 - **Complete Export**: Full account data in JSON/CSV format
@@ -277,8 +252,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS (
   api_keys_enabled BOOLEAN DEFAULT FALSE,
   data_retention_days INTEGER DEFAULT 365,
   theme_preference TEXT DEFAULT 'dark',
-  timezone TEXT DEFAULT 'UTC',
-  preferred_currency TEXT DEFAULT 'USD',
   privacy_analytics_enabled BOOLEAN DEFAULT TRUE,
   privacy_marketing_enabled BOOLEAN DEFAULT TRUE
 );
@@ -409,12 +382,10 @@ DELETE /api/settings/account          // Delete account
 
 ### 7.3 Phase 3: Advanced Features (Week 5-6)
 **Power User Features**
-- Trading preferences and exchange settings
 - Theme and appearance customization
 - Data export functionality
 
 **Deliverables:**
-- Trading preferences configuration
 - Complete theme customization
 - Data export and account deletion
 
